@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row g-4"><div class="col-lg-4"><div class="card"><div class="card-body"><h3>Create booking</h3><form method="post">
+<select class="form-select mb-2" name="project_id">{% for p in projects %}<option value="{{ p.id }}">{{ p.title }}</option>{% endfor %}</select>
+<select class="form-select mb-2" name="space"><option>Research Studio</option><option>Seminar Zone</option><option>Public Interface Mode</option><option>Technical Lab</option></select>
+<input class="form-control mb-2" name="booking_type" placeholder="Booking type" required>
+<input class="form-control mb-2" type="datetime-local" name="start_dt" required>
+<input class="form-control mb-2" type="datetime-local" name="end_dt" required>
+<input class="form-control mb-2" name="lead_name" placeholder="Lead name" required>
+<textarea class="form-control mb-2" name="notes" placeholder="Notes"></textarea>
+<button class="btn btn-dark">Save booking</button></form></div></div></div>
+<div class="col-lg-8"><div class="card"><div class="card-body"><h3>Schedule</h3><table class="table table-striped"><tr><th>Start</th><th>End</th><th>Space</th><th>Project</th><th>Lead</th></tr>{% for b in bookings %}<tr><td>{{ b.start_dt.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ b.end_dt.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ b.space }}</td><td>{{ b.project.title }}</td><td>{{ b.lead_name }}</td></tr>{% endfor %}</table></div></div></div></div>
+{% endblock %}

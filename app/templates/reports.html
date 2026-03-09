@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row g-4"><div class="col-lg-4"><div class="card"><div class="card-body"><h3>Create monthly report</h3><p class="small-muted">Current month activity snapshot: {{ month_bookings }} bookings, {{ month_events }} dissemination events.</p><form method="post">
+<input class="form-control mb-2" name="month" placeholder="YYYY-MM" required>
+<textarea class="form-control mb-2" name="summary" placeholder="Summary" required></textarea>
+<button class="btn btn-dark">Save report</button></form></div></div></div>
+<div class="col-lg-8"><div class="card"><div class="card-body"><h3>Reports archive</h3>{% for r in reports %}<div class="border rounded p-3 mb-3"><strong>{{ r.month }}</strong><div class="small-muted">Created {{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</div><p class="mt-2 mb-0">{{ r.summary }}</p></div>{% else %}<p>No reports yet.</p>{% endfor %}</div></div></div></div>
+{% endblock %}

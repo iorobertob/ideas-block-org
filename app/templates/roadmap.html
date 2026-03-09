@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row g-4"><div class="col-lg-4"><div class="card"><div class="card-body"><h3>Add roadmap item</h3><form method="post">
+<select class="form-select mb-2" name="phase"><option value="phase_i">Phase I</option><option value="phase_ii">Phase II</option></select>
+<input class="form-control mb-2" name="title" placeholder="Title" required>
+<input class="form-control mb-2" type="number" name="year" placeholder="Year" required>
+<input class="form-control mb-2" name="owner" placeholder="Owner" required>
+<select class="form-select mb-2" name="status"><option>planned</option><option>in_progress</option><option>completed</option></select>
+<textarea class="form-control mb-2" name="details" placeholder="Details"></textarea>
+<button class="btn btn-dark">Save item</button></form></div></div></div>
+<div class="col-lg-8"><div class="card"><div class="card-body"><h3>Phase I / Phase II roadmap</h3><table class="table table-striped"><tr><th>Year</th><th>Phase</th><th>Title</th><th>Owner</th><th>Status</th><th>Details</th></tr>{% for i in items %}<tr><td>{{ i.year }}</td><td>{{ i.phase }}</td><td>{{ i.title }}</td><td>{{ i.owner }}</td><td>{{ i.status }}</td><td>{{ i.details }}</td></tr>{% endfor %}</table></div></div></div></div>
+{% endblock %}

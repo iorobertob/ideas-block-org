@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row g-4"><div class="col-lg-4"><div class="card"><div class="card-body"><h3>Add policy</h3><form method="post">
+<input class="form-control mb-2" name="title" placeholder="Title" required>
+<input class="form-control mb-2" name="category" placeholder="Category" required>
+<input class="form-control mb-2" name="version" placeholder="Version" value="1.0">
+<textarea class="form-control mb-2" name="content" placeholder="Policy content" required></textarea>
+<button class="btn btn-dark">Save policy</button></form></div></div></div>
+<div class="col-lg-8"><div class="card"><div class="card-body"><h3>Policy library</h3>{% for p in policies %}<div class="border rounded p-3 mb-3"><div class="d-flex justify-content-between"><strong>{{ p.title }}</strong><span class="badge text-bg-info">{{ p.category }}</span></div><div class="small-muted">Version {{ p.version }}</div><p class="mt-2 mb-0">{{ p.content }}</p></div>{% endfor %}</div></div></div></div>
+{% endblock %}

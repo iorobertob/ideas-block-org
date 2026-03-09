@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row g-4"><div class="col-lg-4"><div class="card"><div class="card-body"><h3>Add equipment</h3><form method="post">
+<input class="form-control mb-2" name="name" placeholder="Name" required>
+<input class="form-control mb-2" name="category" placeholder="Category" required>
+<div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="portable" checked><label class="form-check-label">Portable</label></div>
+<select class="form-select mb-2" name="status"><option>available</option><option>in_use</option><option>maintenance</option></select>
+<input class="form-control mb-2" name="owner" placeholder="Owner" value="LMTA / Ideas Block">
+<textarea class="form-control mb-2" name="transfer_plan" placeholder="Transfer plan"></textarea>
+<button class="btn btn-dark">Add item</button></form></div></div></div>
+<div class="col-lg-8"><div class="card"><div class="card-body"><h3>Inventory and portability</h3><table class="table"><tr><th>Name</th><th>Category</th><th>Status</th><th>Portable</th><th>Transfer plan</th></tr>{% for e in equipment %}<tr><td>{{ e.name }}</td><td>{{ e.category }}</td><td>{{ e.status }}</td><td>{{ 'Yes' if e.portable else 'No' }}</td><td>{{ e.transfer_plan }}</td></tr>{% endfor %}</table></div></div></div></div>
+{% endblock %}

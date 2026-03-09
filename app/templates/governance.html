@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row g-4"><div class="col-lg-4"><div class="card"><div class="card-body"><h3>Meeting / decision record</h3><form method="post">
+<input class="form-control mb-2" name="title" placeholder="Title" required>
+<input class="form-control mb-2" type="date" name="meeting_date" required>
+<select class="form-select mb-2" name="meeting_type"><option>steering</option><option>operations</option><option>curatorial</option><option>partnership</option></select>
+<textarea class="form-control mb-2" name="body" placeholder="Agenda / notes" required></textarea>
+<textarea class="form-control mb-2" name="decisions" placeholder="Decisions"></textarea>
+<button class="btn btn-dark">Save meeting</button></form></div></div></div>
+<div class="col-lg-8"><div class="card"><div class="card-body"><h3>Governance log</h3>{% for m in meetings %}<div class="border rounded p-3 mb-3"><div class="d-flex justify-content-between"><strong>{{ m.title }}</strong><span class="badge text-bg-secondary">{{ m.meeting_type }}</span></div><div class="small-muted">{{ m.meeting_date }}</div><p class="mt-2 mb-1">{{ m.body }}</p><p class="mb-0"><strong>Decisions:</strong> {{ m.decisions }}</p></div>{% endfor %}</div></div></div></div>
+{% endblock %}

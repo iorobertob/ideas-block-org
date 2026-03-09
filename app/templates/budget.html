@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row g-4"><div class="col-lg-4"><div class="card"><div class="card-body"><h3>Record budget item</h3><form method="post">
+<input class="form-control mb-2" name="category" placeholder="Category" required>
+<select class="form-select mb-2" name="direction"><option value="income">Income</option><option value="expense">Expense</option></select>
+<input class="form-control mb-2" type="number" step="0.01" name="amount" placeholder="Amount" required>
+<input class="form-control mb-2" type="date" name="item_date">
+<textarea class="form-control mb-2" name="note" placeholder="Note"></textarea>
+<button class="btn btn-dark">Save item</button></form>
+<hr><p><strong>Income:</strong> {{ income }}</p><p><strong>Expense:</strong> {{ expense }}</p><p><strong>Net:</strong> {{ net }}</p></div></div></div>
+<div class="col-lg-8"><div class="card"><div class="card-body"><h3>Budget ledger</h3><table class="table table-striped"><tr><th>Date</th><th>Category</th><th>Direction</th><th>Amount</th><th>Note</th></tr>{% for i in items %}<tr><td>{{ i.item_date }}</td><td>{{ i.category }}</td><td>{{ i.direction }}</td><td>{{ i.amount }}</td><td>{{ i.note }}</td></tr>{% endfor %}</table></div></div></div></div>
+{% endblock %}

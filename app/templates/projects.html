@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row g-4"><div class="col-lg-4"><div class="card"><div class="card-body"><h3>New research project</h3><form method="post">
+<input class="form-control mb-2" name="title" placeholder="Title" required>
+<input class="form-control mb-2" name="lead" placeholder="Lead" required>
+<div class="row g-2 mb-2"><div class="col"><select class="form-select" name="phase"><option value="phase_i">Phase I</option><option value="phase_ii">Phase II</option><option value="pilot">Pilot</option></select></div><div class="col"><select class="form-select" name="status"><option>active</option><option>planned</option><option>completed</option></select></div></div>
+<textarea class="form-control mb-2" name="research_question" placeholder="Research question" required></textarea>
+<textarea class="form-control mb-2" name="methods" placeholder="Methods"></textarea>
+<textarea class="form-control mb-2" name="outputs" placeholder="Expected outputs"></textarea>
+<div class="row g-2 mb-2"><div class="col"><input type="date" class="form-control" name="start_date"></div><div class="col"><input type="date" class="form-control" name="end_date"></div></div>
+<button class="btn btn-dark">Save project</button></form></div></div></div>
+<div class="col-lg-8"><div class="card"><div class="card-body"><h3>Research projects</h3><table class="table table-striped"><tr><th>Title</th><th>Lead</th><th>Phase</th><th>Status</th><th>Outputs</th></tr>{% for p in projects %}<tr><td><strong>{{ p.title }}</strong><div class="small-muted">{{ p.research_question }}</div></td><td>{{ p.lead }}</td><td>{{ p.phase }}</td><td>{{ p.status }}</td><td>{{ p.outputs }}</td></tr>{% endfor %}</table></div></div></div></div>
+{% endblock %}

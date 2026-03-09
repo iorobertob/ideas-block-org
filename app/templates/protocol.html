@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row g-4"><div class="col-lg-4"><div class="card"><div class="card-body"><h3>Add protocol rule</h3><form method="post">
+<input class="form-control mb-2" name="principle" placeholder="Principle" required>
+<textarea class="form-control mb-2" name="description" placeholder="Description" required></textarea>
+<textarea class="form-control mb-2" name="implementation" placeholder="Implementation"></textarea>
+<button class="btn btn-dark">Save rule</button></form></div></div></div>
+<div class="col-lg-8"><div class="card"><div class="card-body"><h3>Kompresorinė Protocol</h3>{% for r in rules %}<div class="border rounded p-3 mb-3"><h5>{{ r.principle }}</h5><p class="mb-1">{{ r.description }}</p><div class="small-muted"><strong>Implementation:</strong> {{ r.implementation }}</div></div>{% endfor %}<hr><h4>Linked policies</h4><ul>{% for p in policies %}<li><strong>{{ p.title }}</strong> ({{ p.category }})</li>{% endfor %}</ul></div></div></div></div>
+{% endblock %}

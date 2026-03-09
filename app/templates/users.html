@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row g-4">
+<div class="col-lg-4"><div class="card"><div class="card-body"><h3>Add user</h3><form method="post">
+<div class="mb-2"><input class="form-control" name="name" placeholder="Name" required></div>
+<div class="mb-2"><input class="form-control" name="email" placeholder="Email" required></div>
+<div class="mb-2"><input class="form-control" name="password" placeholder="Password" required></div>
+<div class="mb-2"><select class="form-select" name="role"><option>member</option><option>coordinator</option><option>director</option><option>admin</option></select></div>
+<button class="btn btn-dark">Create</button></form></div></div></div>
+<div class="col-lg-8"><div class="card"><div class="card-body"><h3>Users</h3><table class="table"><tr><th>Name</th><th>Email</th><th>Role</th></tr>{% for u in users %}<tr><td>{{ u.name }}</td><td>{{ u.email }}</td><td>{{ u.role }}</td></tr>{% endfor %}</table></div></div></div>
+</div>
+{% endblock %}
