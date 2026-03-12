@@ -1,0 +1,30 @@
+{% extends 'base.html' %}{% block content %}
+<div class='row g-4'><div class='col-lg-4'><div class='card'><div class='card-body'><h3>Add equipment</h3><form method='post'>
+<input class='form-control mb-2' name='name' placeholder='Name' required>
+<input class='form-control mb-2' name='category' placeholder='Category' required>
+<div class='form-check mb-2'><input class='form-check-input' type='checkbox' name='portable' id='portable' checked><label class='form-check-label' for='portable'>Portable</label></div>
+<select class='form-select mb-2' name='status'><option>available</option><option>in_use</option><option>maintenance</option><option>reserved</option></select>
+<input class='form-control mb-2' name='owner' placeholder='Owner' value='Ideas Block / LMTA partnership'>
+<textarea class='form-control mb-2' name='transfer_plan' placeholder='Transfer plan (required for portability)'></textarea>
+<button class='btn btn-dark'>Save equipment</button></form></div></div></div>
+<div class='col-lg-8'><div class='card'><div class='card-body'><h3>Equipment inventory</h3>
+<form method='get' class='d-flex gap-2 mb-3 flex-wrap'>
+  <input class='form-control form-control-sm' style='max-width:200px' name='q' value='{{ q }}' placeholder='Search name, owner…'>
+  <select class='form-select form-select-sm' style='max-width:160px' name='category'>
+    <option value=''>All categories</option>
+    {% for c in categories %}<option value='{{ c }}' {% if c == category %}selected{% endif %}>{{ c }}</option>{% endfor %}
+  </select>
+  <select class='form-select form-select-sm' style='max-width:150px' name='status'>
+    <option value=''>All statuses</option>
+    <option value='available' {% if status=='available' %}selected{% endif %}>Available</option>
+    <option value='in_use' {% if status=='in_use' %}selected{% endif %}>In use</option>
+    <option value='maintenance' {% if status=='maintenance' %}selected{% endif %}>Maintenance</option>
+    <option value='reserved' {% if status=='reserved' %}selected{% endif %}>Reserved</option>
+  </select>
+  <button class='btn btn-sm btn-outline-secondary'>Filter</button>
+  {% if q or status or category %}<a class='btn btn-sm btn-outline-secondary' href='{{ url_for("equipment") }}'>Clear</a>{% endif %}
+</form>
+<table class='table table-striped linked-row'><tr><th>Name</th><th>Category</th><th>Status</th><th>Portable</th></tr>
+{% for e in equipment %}<tr><td><a class='primary-link' href='{{ url_for("record_detail", kind="equipment", record_id=e.id) }}'>{{ e.name }}</a></td><td>{{ e.category }}</td><td>{{ e.status }}</td><td>{{ 'Yes' if e.portable else 'No' }}</td></tr>
+{% else %}<tr><td colspan='4'>No equipment found.</td></tr>{% endfor %}
+</table></div></div></div></div>{% endblock %}

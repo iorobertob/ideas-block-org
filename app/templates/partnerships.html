@@ -1,0 +1,18 @@
+{% extends 'base.html' %}{% block content %}
+<div class='row g-4'><div class='col-lg-4'>
+<div class='card mb-4'><div class='card-body'><h3>Add institution</h3><form method='post'><input type='hidden' name='form_name' value='institution'>
+<input class='form-control mb-2' name='name' placeholder='Institution name' required>
+<input class='form-control mb-2' name='category' placeholder='Category' required>
+<input class='form-control mb-2' name='contact_person' placeholder='Contact person'>
+<input class='form-control mb-2' name='contact_email' type='email' placeholder='Contact email'>
+<textarea class='form-control mb-2' name='notes' placeholder='Notes'></textarea>
+<button class='btn btn-dark'>Save institution</button></form></div></div>
+<div class='card'><div class='card-body'><h3>Add partnership</h3><form method='post'><input type='hidden' name='form_name' value='partnership'>
+<select class='form-select mb-2' name='institution_id'>{% for i in institutions %}<option value='{{ i.id }}'>{{ i.name }}</option>{% endfor %}</select>
+<select class='form-select mb-2' name='status'><option>prospective</option><option>active</option><option>closed</option></select>
+<textarea class='form-control mb-2' name='objective' placeholder='Objective' required></textarea>
+<textarea class='form-control mb-2' name='requested_support' placeholder='Requested support'></textarea>
+<input class='form-control mb-2' name='timeline' placeholder='Timeline'>
+<button class='btn btn-dark'>Save partnership</button></form></div></div></div>
+<div class='col-lg-8'><div class='card mb-4'><div class='card-body'><h3>Institutions</h3><table class='table table-striped linked-row'><tr><th>Name</th><th>Category</th><th>Contact</th></tr>{% for i in institutions %}<tr><td><a class='primary-link' href='{{ url_for("record_detail", kind="institutions", record_id=i.id) }}'>{{ i.name }}</a></td><td>{{ i.category }}</td><td>{{ i.contact_person }}</td></tr>{% endfor %}</table></div></div><div class='card'><div class='card-body'><h3>Partnership map</h3><table class='table table-striped linked-row'><tr><th>Institution</th><th>Status</th><th>Objective</th></tr>{% for p in partnerships %}<tr><td><a class='primary-link' href='{{ url_for("record_detail", kind="partnerships", record_id=p.id) }}'>{{ p.institution.name }}</a></td><td>{{ p.status }}</td><td>{{ p.objective }}</td></tr>{% endfor %}</table></div></div></div>
+</div>{% endblock %}

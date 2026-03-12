@@ -1,0 +1,47 @@
+{% extends 'base.html' %}{% block content %}
+<div class='row g-4'><div class='col-lg-4'><div class='card'><div class='card-body'><h3>Add booking</h3>
+<div class='alert alert-info py-2 small mb-3'><strong>Protocol:</strong> Weekday 9:00–17:00 slots are reserved for research use. Non-research bookings during core hours require a documented reason.</div>
+<form method='post' id='bookingForm'>
+<select class='form-select mb-2' name='project_id'>{% for p in projects %}<option value='{{ p.id }}'>{{ p.title }}</option>{% endfor %}</select>
+<input class='form-control mb-2' name='space' placeholder='Space' required>
+<input class='form-control mb-2' name='booking_type' id='bookingType' placeholder='Booking type' required>
+<input class='form-control mb-2' type='datetime-local' name='start_dt' id='startDt' required>
+<input class='form-control mb-2' type='datetime-local' name='end_dt' required>
+<input class='form-control mb-2' name='lead_name' value='{{ current_user.name }}' placeholder='Lead name' required>
+<textarea class='form-control mb-2' name='notes' placeholder='Notes / override reason if non-research core-hours booking'></textarea>
+<button class='btn btn-dark'>Save booking</button></form></div></div></div>
+<div class='col-lg-8'><div class='card'><div class='card-body'>
+<div class='d-flex justify-content-between align-items-center mb-3'>
+  <h3 class='mb-0'>Bookings</h3>
+  <a class='btn btn-outline-secondary btn-sm' href='{{ url_for("booking_calendar") }}'>Calendar view</a>
+</div>
+<form method='get' class='d-flex gap-2 mb-3 flex-wrap'>
+  <input class='form-control form-control-sm' style='max-width:220px' name='q' value='{{ q }}' placeholder='Search space, type, lead…'>
+  <select class='form-select form-select-sm' style='max-width:180px' name='space'>
+    <option value=''>All spaces</option>
+    {% for s in spaces %}<option value='{{ s }}' {% if s == space %}selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+  <button class='btn btn-sm btn-outline-secondary'>Filter</button>
+  {% if q or space %}<a class='btn btn-sm btn-outline-secondary' href='{{ url_for("bookings") }}'>Clear</a>{% endif %}
+</form>
+<table class='table table-striped linked-row'><tr><th>Space</th><th>Project</th><th>Start</th><th>End</th></tr>
+{% for b in bookings %}<tr><td><a class='primary-link' href='{{ url_for("record_detail", kind="bookings", record_id=b.id) }}'>{{ b.space }}</a><div class='small-muted'>{{ b.booking_type }}</div></td><td>{{ b.project.title }}</td><td>{{ b.start_dt.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ b.end_dt.strftime('%Y-%m-%d %H:%M') }}</td></tr>{% else %}<tr><td colspan='4'>No bookings found.</td></tr>{% endfor %}
+</table></div></div></div></div>
+<script>
+document.getElementById('bookingForm').addEventListener('submit', function(e) {
+  var bookingType = document.getElementById('bookingType').value.toLowerCase();
+  var startDt = document.getElementById('startDt').value;
+  if (!startDt) return;
+  var dt = new Date(startDt);
+  var hour = dt.getHours();
+  var day = dt.getDay();
+  var researchKeywords = ['research', 'lab', 'rehearsal', 'session', 'workshop', 'seminar', 'residency', 'method', 'experiment', 'practice'];
+  var isResearch = researchKeywords.some(function(k) { return bookingType.indexOf(k) !== -1; });
+  var isWeekdayCore = day >= 1 && day <= 5 && hour >= 9 && hour < 17;
+  if (isWeekdayCore && !isResearch) {
+    var ok = confirm('Protocol Notice\n\nThis booking occupies weekday core research hours (Mon–Fri 9:00–17:00) without a research designation.\n\nThis may conflict with the Research-First Scheduling Protocol (Principle: Research-First Scheduling).\n\nIf this is an exception, please document the reason in the Notes field.\n\nProceed anyway?');
+    if (!ok) { e.preventDefault(); }
+  }
+});
+</script>
+{% endblock %}

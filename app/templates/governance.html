@@ -1,0 +1,10 @@
+{% extends 'base.html' %}{% block content %}
+<div class='row g-4'><div class='col-lg-4'><div class='card'><div class='card-body'><h3>Add meeting record</h3><form method='post'>
+<input class='form-control mb-2' name='title' placeholder='Title' required>
+<input class='form-control mb-2' type='date' name='meeting_date' required>
+<select class='form-select mb-2' name='meeting_type'><option>steering</option><option>operations</option><option>working_group</option></select>
+<textarea class='form-control mb-2' name='body' placeholder='Body' required></textarea>
+<textarea class='form-control mb-2' name='decisions' placeholder='Decisions'></textarea>
+<button class='btn btn-dark'>Save meeting</button></form></div></div></div>
+<div class='col-lg-8'><div class='card'><div class='card-body'><h3>Governance log</h3><table class='table table-striped linked-row'><tr><th>Date</th><th>Meeting</th><th>Type</th><th>Decisions</th></tr>{% for m in meetings %}<tr><td>{{ m.meeting_date }}</td><td><a class='primary-link' href='{{ url_for("record_detail", kind="governance", record_id=m.id) }}'>{{ m.title }}</a></td><td>{{ m.meeting_type }}</td><td>{{ m.decisions }}</td></tr>{% endfor %}</table></div></div></div></div>
+{% endblock %}

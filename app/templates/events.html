@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% block content %}
+<div class='row g-4'><div class='col-lg-4'><div class='card'><div class='card-body'><h3>Add dissemination event</h3><form method='post'>
+<input class='form-control mb-2' name='title' placeholder='Title' required>
+<input class='form-control mb-2' type='date' name='event_date' required>
+<input class='form-control mb-2' name='format' placeholder='Format' required>
+<input class='form-control mb-2' name='audience' placeholder='Audience'>
+<input class='form-control mb-2' name='linked_project' placeholder='Linked project'>
+<textarea class='form-control mb-2' name='notes' placeholder='Notes'></textarea>
+<button class='btn btn-dark'>Save event</button></form></div></div></div>
+<div class='col-lg-8'><div class='card'><div class='card-body'><h3>Public research interface</h3><table class='table table-striped linked-row'><tr><th>Date</th><th>Title</th><th>Format</th><th>Audience</th></tr>{% for e in events %}<tr><td>{{ e.event_date }}</td><td><a class='primary-link' href='{{ url_for("record_detail", kind="events", record_id=e.id) }}'>{{ e.title }}</a></td><td>{{ e.format }}</td><td>{{ e.audience }}</td></tr>{% endfor %}</table></div></div></div></div>
+{% endblock %}

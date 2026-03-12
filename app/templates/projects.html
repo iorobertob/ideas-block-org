@@ -1,0 +1,32 @@
+{% extends 'base.html' %}{% block content %}
+<div class='row g-4'><div class='col-lg-4'><div class='card'><div class='card-body'><h3>New research project</h3><form method='post'>
+<input class='form-control mb-2' name='title' placeholder='Title' required>
+<input class='form-control mb-2' name='lead' placeholder='Lead' value='{{ current_user.name }}' required>
+<div class='row g-2 mb-2'><div class='col'><select class='form-select' name='phase'><option value='phase_i'>Phase I</option><option value='phase_ii'>Phase II</option><option value='pilot'>Pilot</option></select></div><div class='col'><select class='form-select' name='status'><option>active</option><option>planned</option><option>completed</option></select></div></div>
+<textarea class='form-control mb-2' name='research_question' placeholder='Research question' required></textarea>
+<textarea class='form-control mb-2' name='methods' placeholder='Methods'></textarea>
+<textarea class='form-control mb-2' name='outputs' placeholder='Expected outputs'></textarea>
+<div class='row g-2 mb-2'><div class='col'><input type='date' class='form-control' name='start_date'></div><div class='col'><input type='date' class='form-control' name='end_date'></div></div>
+<button class='btn btn-dark'>Save project</button></form></div></div></div>
+<div class='col-lg-8'><div class='card'><div class='card-body'><h3>Research projects</h3>
+<form method='get' class='d-flex gap-2 mb-3 flex-wrap'>
+  <input class='form-control form-control-sm' style='max-width:220px' name='q' value='{{ q }}' placeholder='Search title, lead, question…'>
+  <select class='form-select form-select-sm' style='max-width:140px' name='status'>
+    <option value=''>All statuses</option>
+    <option value='active' {% if status=='active' %}selected{% endif %}>Active</option>
+    <option value='planned' {% if status=='planned' %}selected{% endif %}>Planned</option>
+    <option value='completed' {% if status=='completed' %}selected{% endif %}>Completed</option>
+  </select>
+  <select class='form-select form-select-sm' style='max-width:130px' name='phase'>
+    <option value=''>All phases</option>
+    <option value='phase_i' {% if phase=='phase_i' %}selected{% endif %}>Phase I</option>
+    <option value='phase_ii' {% if phase=='phase_ii' %}selected{% endif %}>Phase II</option>
+    <option value='pilot' {% if phase=='pilot' %}selected{% endif %}>Pilot</option>
+  </select>
+  <button class='btn btn-sm btn-outline-secondary'>Filter</button>
+  {% if q or status or phase %}<a class='btn btn-sm btn-outline-secondary' href='{{ url_for("projects") }}'>Clear</a>{% endif %}
+</form>
+<table class='table table-striped linked-row'><tr><th>Title</th><th>Lead</th><th>Phase</th><th>Status</th></tr>
+{% for p in projects %}<tr><td><a class='primary-link' href='{{ url_for("record_detail", kind="projects", record_id=p.id) }}'>{{ p.title }}</a><div class='small-muted'>{{ p.research_question[:110] }}{% if p.research_question|length > 110 %}...{% endif %}</div></td><td>{{ p.lead }}</td><td>{{ p.phase }}</td><td>{{ p.status }}</td></tr>
+{% else %}<tr><td colspan='4'>No projects found.</td></tr>{% endfor %}
+</table></div></div></div></div>{% endblock %}

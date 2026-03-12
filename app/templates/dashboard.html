@@ -1,0 +1,8 @@
+{% extends 'base.html' %}{% block content %}
+<h1 class='mb-4'>Dashboard</h1>
+<div class='row g-3 mb-4'>{% for key, value in stats.items() %}<div class='col-md-2'><div class='card'><div class='card-body'><div class='small-muted text-uppercase'>{{ key.replace('_',' ') }}</div><div class='display-6'>{{ value }}</div></div></div></div>{% endfor %}</div>
+<div class='row g-4'>
+<div class='col-lg-5'><div class='card'><div class='card-body'><h4>Upcoming bookings</h4><ul class='list-group list-group-flush'>{% for b in upcoming %}<li class='list-group-item'><a class='primary-link' href='{{ url_for("record_detail", kind="bookings", record_id=b.id) }}'>{{ b.space }}</a> · {{ b.booking_type }}<br><span class='small-muted'>{{ b.start_dt.strftime('%Y-%m-%d %H:%M') }} — {{ b.project.title }}</span></li>{% else %}<li class='list-group-item'>No bookings yet.</li>{% endfor %}</ul></div></div></div>
+<div class='col-lg-4'><div class='card'><div class='card-body'><h4>Recent meetings</h4><ul class='list-group list-group-flush'>{% for m in meetings %}<li class='list-group-item'><a class='primary-link' href='{{ url_for("record_detail", kind="governance", record_id=m.id) }}'>{{ m.title }}</a><br><span class='small-muted'>{{ m.meeting_date }} · {{ m.meeting_type }}</span><div>{{ m.decisions }}</div></li>{% endfor %}</ul></div></div></div>
+<div class='col-lg-3'><div class='card'><div class='card-body'><h4>Open risks</h4>{% for r in risks %}<div class='mb-3'><span class='badge text-bg-warning'>{{ r.severity }}</span> <a class='primary-link' href='{{ url_for("record_detail", kind="risks", record_id=r.id) }}'>{{ r.title }}</a><div class='small-muted'>{{ r.owner }}</div></div>{% endfor %}</div></div></div>
+</div>{% endblock %}
