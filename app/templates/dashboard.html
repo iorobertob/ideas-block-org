@@ -1,8 +1,157 @@
 {% extends 'base.html' %}{% block content %}
-<h1 class='mb-4'>Dashboard</h1>
-<div class='row g-3 mb-4'>{% for key, value in stats.items() %}<div class='col-md-2'><div class='card'><div class='card-body'><div class='small-muted text-uppercase'>{{ key.replace('_',' ') }}</div><div class='display-6'>{{ value }}</div></div></div></div>{% endfor %}</div>
-<div class='row g-4'>
-<div class='col-lg-5'><div class='card'><div class='card-body'><h4>Upcoming bookings</h4><ul class='list-group list-group-flush'>{% for b in upcoming %}<li class='list-group-item'><a class='primary-link' href='{{ url_for("record_detail", kind="bookings", record_id=b.id) }}'>{{ b.space }}</a> · {{ b.booking_type }}<br><span class='small-muted'>{{ b.start_dt.strftime('%Y-%m-%d %H:%M') }} — {{ b.project.title }}</span></li>{% else %}<li class='list-group-item'>No bookings yet.</li>{% endfor %}</ul></div></div></div>
-<div class='col-lg-4'><div class='card'><div class='card-body'><h4>Recent meetings</h4><ul class='list-group list-group-flush'>{% for m in meetings %}<li class='list-group-item'><a class='primary-link' href='{{ url_for("record_detail", kind="governance", record_id=m.id) }}'>{{ m.title }}</a><br><span class='small-muted'>{{ m.meeting_date }} · {{ m.meeting_type }}</span><div>{{ m.decisions }}</div></li>{% endfor %}</ul></div></div></div>
-<div class='col-lg-3'><div class='card'><div class='card-body'><h4>Open risks</h4>{% for r in risks %}<div class='mb-3'><span class='badge text-bg-warning'>{{ r.severity }}</span> <a class='primary-link' href='{{ url_for("record_detail", kind="risks", record_id=r.id) }}'>{{ r.title }}</a><div class='small-muted'>{{ r.owner }}</div></div>{% endfor %}</div></div></div>
-</div>{% endblock %}
+<div class="page-header d-flex justify-content-between align-items-end flex-wrap gap-2">
+  <div>
+    <h1>Dashboard</h1>
+    <div class="small-muted">Kompresorinė Artistic Research Satellite · Phase I</div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('projects') }}" class="btn btn-sm btn-dark">+ Project</a>
+    <a href="{{ url_for('bookings') }}" class="btn btn-sm btn-outline-secondary">+ Booking</a>
+    <a href="{{ url_for('tasks') }}" class="btn btn-sm btn-outline-secondary">+ Task</a>
+    <a href="{{ url_for('polls_new') }}" class="btn btn-sm btn-outline-secondary">+ Poll</a>
+  </div>
+</div>
+
+<!-- Stats row -->
+<div class="row g-2 mb-4">
+  {% set stat_icons = {'projects':'🔬','bookings':'📅','equipment':'🔧','partners':'🤝','net_budget':'💶','open_tasks':'✅','working_groups':'👥','open_risks':'⚠️'} %}
+  {% for key, value in stats.items() %}
+  <div class="col-6 col-sm-4 col-md-3 col-xl-auto flex-xl-fill">
+    <div class="card h-100">
+      <div class="card-body p-3 text-center">
+        <div style="font-size:1.4rem">{{ stat_icons.get(key,'·') }}</div>
+        <div class="small-muted" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.04em">{{ key.replace('_',' ') }}</div>
+        <div class="fw-bold fs-5">{{ value }}</div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3">
+
+  <!-- My tasks -->
+  {% if my_tasks %}
+  <div class="col-12">
+    <div class="card border-start border-4" style="border-color: #5c7c5c !important;">
+      <div class="card-header">My open tasks</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <tr><th>Task</th><th>Priority</th><th>Due</th><th>Context</th><th></th></tr>
+          {% for t in my_tasks %}
+          <tr>
+            <td><a href="{{ url_for('record_detail', kind='tasks', record_id=t.id) }}" class="primary-link">{{ t.title }}</a></td>
+            <td><span class="status-badge priority-{{ t.priority }}">{{ t.priority }}</span></td>
+            <td class="small-muted">{{ t.due_date or '—' }}</td>
+            <td class="small-muted">{% if t.entity_type %}{{ t.entity_type }} #{{ t.entity_id }}{% else %}—{% endif %}</td>
+            <td>
+              <form method="post" action="{{ url_for('update_task_status', task_id=t.id) }}" class="d-inline">
+                <input type="hidden" name="status" value="done">
+                <button class="btn btn-sm btn-link p-0 text-success">✓ done</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Upcoming bookings -->
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between">
+        Upcoming bookings
+        <a href="{{ url_for('booking_calendar') }}" class="small-muted">calendar →</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for b in upcoming %}
+          <li class="list-group-item px-3 py-2">
+            <a class="primary-link d-block" href="{{ url_for('record_detail', kind='bookings', record_id=b.id) }}">{{ b.space }}</a>
+            <div class="small-muted">{{ b.start_dt.strftime('%d %b %H:%M') }} · {{ b.booking_type }}</div>
+            <div class="small-muted">{{ b.project.title }}</div>
+          </li>
+          {% else %}
+          <li class="list-group-item px-3 py-2 small-muted">No upcoming bookings.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent meetings -->
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between">
+        Recent meetings
+        <a href="{{ url_for('governance') }}" class="small-muted">all →</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for m in meetings %}
+          <li class="list-group-item px-3 py-2">
+            <a class="primary-link d-block" href="{{ url_for('record_detail', kind='governance', record_id=m.id) }}">{{ m.title }}</a>
+            <div class="small-muted">{{ m.meeting_date }} · {{ m.meeting_type }}</div>
+            {% if m.decisions %}<div class="small-muted" style="font-size:0.78rem">{{ m.decisions[:80] }}{% if m.decisions|length > 80 %}…{% endif %}</div>{% endif %}
+          </li>
+          {% else %}
+          <li class="list-group-item px-3 py-2 small-muted">No meetings recorded.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Open risks -->
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between">
+        Open risks
+        <a href="{{ url_for('risks') }}" class="small-muted">all →</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for r in risks %}
+          <li class="list-group-item px-3 py-2">
+            <a class="primary-link d-block" href="{{ url_for('record_detail', kind='risks', record_id=r.id) }}">{{ r.title }}</a>
+            <div class="small-muted">
+              <span class="status-badge severity-{{ r.severity }}">{{ r.severity }}</span>
+              {{ r.owner }}
+            </div>
+          </li>
+          {% else %}
+          <li class="list-group-item px-3 py-2 small-muted">No open risks.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upcoming events -->
+  {% if upcoming_events %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between">
+        Upcoming events
+        <a href="{{ url_for('events') }}" class="small-muted">all →</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for e in upcoming_events %}
+          <li class="list-group-item px-3 py-2">
+            <a class="primary-link d-block" href="{{ url_for('record_detail', kind='events', record_id=e.id) }}">{{ e.title }}</a>
+            <div class="small-muted">{{ e.event_date }} · {{ e.format }}</div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

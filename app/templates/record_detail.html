@@ -1,206 +1,428 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
   <div>
-    <h1 class="mb-1">{{ config.singular }}</h1>
-    <div class="small-muted">{{ config.summary(obj) if config.summary else config.singular }} · ID {{ obj.id }}</div>
+    <h1>{{ config.summary(obj) if config.summary else config.singular }}</h1>
+    <div class="small-muted">{{ config.singular }} · ID {{ obj.id }}</div>
   </div>
-  <a class="btn btn-outline-secondary" href="{{ url_for(config.list_endpoint) }}">Back to {{ config.title }}</a>
-</div>
-<div class="row g-4">
-  <div class="col-lg-5">
-    <div class="card"><div class="card-body">
-      <h4 class="mb-3">Details</h4>
-      <dl class="kv">
-        {% for item in display_fields %}
-          {% if item.field.type != 'password' %}
-          <dt>{{ item.field.label }}</dt>
-          <dd>{{ item.display if item.display not in [None, ''] else '—' }}</dd>
-          {% endif %}
-        {% endfor %}
-      </dl>
-      {% if creator %}<div class="small-muted">Created by {{ creator.name }} ({{ creator.role }})</div>{% endif %}
-    </div></div>
-  </div>
-  <div class="col-lg-7">
-    <div class="card"><div class="card-body">
-      <h4 class="mb-3">{% if can_edit %}Edit{% else %}View only{% endif %}</h4>
-      {% if can_edit %}
-      <form method="post">
-        {% for item in display_fields %}
-          {% set field = item.field %}
-          {% if field.type == 'textarea' %}
-            <div class="mb-3"><label class="form-label">{{ field.label }}</label><textarea class="form-control" name="{{ field.name }}">{{ item.value }}</textarea></div>
-          {% elif field.type == 'select' %}
-            <div class="mb-3"><label class="form-label">{{ field.label }}</label><select class="form-select" name="{{ field.name }}" {% if field.name == 'role' and not is_manager and obj.id == current_user.id %}disabled{% endif %}>
-              {% for value, label in item.options %}<option value="{{ value }}" {% if value|string == item.value|string %}selected{% endif %}>{{ label }}</option>{% endfor %}
-            </select></div>
-          {% elif field.type == 'checkbox' %}
-            <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="{{ field.name }}" id="{{ field.name }}" {% if item.value %}checked{% endif %}><label class="form-check-label" for="{{ field.name }}">{{ field.label }}</label></div>
-          {% elif field.type == 'date' %}
-            <div class="mb-3"><label class="form-label">{{ field.label }}</label><input class="form-control" type="date" name="{{ field.name }}" value="{{ item.value }}"></div>
-          {% elif field.type == 'datetime' %}
-            <div class="mb-3"><label class="form-label">{{ field.label }}</label><input class="form-control" type="datetime-local" name="{{ field.name }}" value="{{ item.value }}"></div>
-          {% elif field.type == 'float' %}
-            <div class="mb-3"><label class="form-label">{{ field.label }}</label><input class="form-control" type="number" step="0.01" name="{{ field.name }}" value="{{ item.value }}"></div>
-          {% elif field.type == 'int' %}
-            <div class="mb-3"><label class="form-label">{{ field.label }}</label><input class="form-control" type="number" name="{{ field.name }}" value="{{ item.value }}"></div>
-          {% elif field.type == 'password' %}
-            <div class="mb-3"><label class="form-label">{{ field.label }}</label><input class="form-control" type="password" name="{{ field.name }}" placeholder="Leave blank to keep current password"></div>
-          {% else %}
-            <div class="mb-3"><label class="form-label">{{ field.label }}</label><input class="form-control" {% if field.type == 'email' %}type="email"{% endif %} name="{{ field.name }}" value="{{ item.value }}"></div>
-          {% endif %}
-        {% endfor %}
-        <button class="btn btn-dark">Save changes</button>
-      </form>
-      {% else %}
-        <p class="mb-0">You can view this record but only managers or the record owner can edit it.</p>
-      {% endif %}
-    </div></div>
-  </div>
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for(config.list_endpoint) }}">← {{ config.title }}</a>
 </div>
 
-{% if kind == 'projects' %}
-<!-- Research Journal -->
-<div class="row mt-4">
-  <div class="col-12">
-    <div class="card"><div class="card-body">
-      <h4 class="mb-3">Research Journal</h4>
-      <form method="post" action="{{ url_for('sessions') }}" class="mb-4 border-bottom pb-3">
-        <input type="hidden" name="project_id" value="{{ obj.id }}">
-        <div class="row g-2 mb-2">
-          <div class="col-md-3"><input type="date" class="form-control" name="session_date" required></div>
-          <div class="col-md-3"><input class="form-control" name="facilitator" placeholder="Facilitator" value="{{ current_user.name }}" required></div>
-          <div class="col-md-6"><input class="form-control" name="participants" placeholder="Participants (comma-separated)"></div>
-        </div>
-        <div class="row g-2 mb-2">
-          <div class="col-md-4"><textarea class="form-control" name="methods_used" placeholder="Methods used" style="min-height:60px"></textarea></div>
-          <div class="col-md-4"><textarea class="form-control" name="observations" placeholder="Observations" style="min-height:60px"></textarea></div>
-          <div class="col-md-4"><textarea class="form-control" name="open_questions" placeholder="Open questions" style="min-height:60px"></textarea></div>
-        </div>
-        <button class="btn btn-sm btn-outline-dark">Log session</button>
-      </form>
-      {% if rs_sessions %}
-      <table class="table table-sm table-striped">
-        <tr><th>Date</th><th>Facilitator</th><th>Methods</th><th>Observations</th><th>Open questions</th><th></th></tr>
-        {% for s in rs_sessions %}
-        <tr>
-          <td class="text-nowrap">{{ s.session_date }}</td>
-          <td>{{ s.facilitator }}</td>
-          <td class="small-muted">{{ s.methods_used[:60] }}{% if s.methods_used|length > 60 %}…{% endif %}</td>
-          <td>{{ s.observations[:100] }}{% if s.observations|length > 100 %}…{% endif %}</td>
-          <td class="small-muted">{{ s.open_questions[:80] }}{% if s.open_questions|length > 80 %}…{% endif %}</td>
-          <td><a href="{{ url_for('record_detail', kind='sessions', record_id=s.id) }}" class="btn btn-sm btn-link p-0">edit</a></td>
-        </tr>
-        {% endfor %}
-      </table>
-      {% else %}
-      <p class="small-muted mb-0">No sessions logged yet. Use the form above to start the research journal.</p>
-      {% endif %}
-    </div></div>
-  </div>
-</div>
-{% endif %}
-
-{% if kind == 'governance' %}
-<!-- Decision Trail -->
-<div class="row mt-4">
-  <div class="col-12">
-    <div class="card"><div class="card-body">
-      <h4 class="mb-3">Decision Trail — Proposals</h4>
-      <form method="post" action="{{ url_for('proposals') }}" class="mb-4 border-bottom pb-3">
-        <input type="hidden" name="meeting_id" value="{{ obj.id }}">
-        <div class="row g-2 mb-2">
-          <div class="col-md-8"><textarea class="form-control" name="proposal_text" placeholder="Proposal text" required style="min-height:60px"></textarea></div>
-          <div class="col-md-4">
-            <input class="form-control mb-1" name="proposer" placeholder="Proposer" value="{{ current_user.name }}">
-            <select class="form-select" name="outcome"><option value="pending">pending</option><option value="approved">approved</option><option value="rejected">rejected</option><option value="deferred">deferred</option></select>
-          </div>
-        </div>
-        <div class="row g-2 mb-2">
-          <div class="col-md-2"><input class="form-control" type="number" name="votes_for" placeholder="For" value="0" min="0"></div>
-          <div class="col-md-2"><input class="form-control" type="number" name="votes_against" placeholder="Against" value="0" min="0"></div>
-          <div class="col-md-8"><input class="form-control" name="dissenting_notes" placeholder="Dissenting notes (optional)"></div>
-        </div>
-        <button class="btn btn-sm btn-outline-dark">Record proposal</button>
-      </form>
-      {% if meeting_proposals %}
-      <table class="table table-sm table-striped">
-        <tr><th>Proposal</th><th>Proposer</th><th>Outcome</th><th>For / Against</th><th>Dissent</th><th></th></tr>
-        {% for p in meeting_proposals %}
-        <tr>
-          <td>{{ p.proposal_text[:120] }}{% if p.proposal_text|length > 120 %}…{% endif %}</td>
-          <td>{{ p.proposer }}</td>
-          <td><span class="badge {% if p.outcome == 'approved' %}text-bg-success{% elif p.outcome == 'rejected' %}text-bg-danger{% elif p.outcome == 'deferred' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">{{ p.outcome }}</span></td>
-          <td>{{ p.votes_for }} / {{ p.votes_against }}</td>
-          <td class="small-muted">{{ p.dissenting_notes[:80] }}{% if p.dissenting_notes|length > 80 %}…{% endif %}</td>
-          <td><a href="{{ url_for('record_detail', kind='proposals', record_id=p.id) }}" class="btn btn-sm btn-link p-0">edit</a></td>
-        </tr>
-        {% endfor %}
-      </table>
-      {% else %}
-      <p class="small-muted mb-0">No proposals recorded. Document deliberation using the form above.</p>
-      {% endif %}
-    </div></div>
-  </div>
-</div>
-{% endif %}
-
-<!-- Attachments + Audit Trail -->
-<div class="row mt-4 g-4">
+<div class="row g-3">
+  <!-- Detail view -->
   <div class="col-md-5">
-    <div class="card"><div class="card-body">
-      <h5 class="mb-3">Attachments</h5>
-      <form method="post" action="{{ url_for('upload_attachment', kind=kind, record_id=obj.id) }}" enctype="multipart/form-data" class="mb-3">
-        <div class="input-group input-group-sm">
-          <input type="file" class="form-control" name="file" required>
-          <button class="btn btn-outline-dark">Upload</button>
-        </div>
-      </form>
-      {% if attachments %}
-      <ul class="list-group list-group-flush">
-        {% for att in attachments %}
-        <li class="list-group-item px-0">
-          <a href="{{ url_for('uploaded_file', filename=att.filename) }}" target="_blank">{{ att.original_name }}</a>
-          <div class="small-muted">{{ att.uploaded_at.strftime('%Y-%m-%d %H:%M') }}{% if att.uploader %} · {{ att.uploader.name }}{% endif %}</div>
-        </li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <p class="small-muted mb-0">No files attached.</p>
-      {% endif %}
-    </div></div>
+    <div class="card">
+      <div class="card-header">Details</div>
+      <div class="card-body">
+        <dl class="kv mb-0">
+          {% for item in display_fields %}
+            {% if item.field.type != 'password' %}
+            <dt>{{ item.field.label }}</dt>
+            <dd>{{ item.display if item.display not in [None, ''] else '—' }}</dd>
+            {% endif %}
+          {% endfor %}
+        </dl>
+        {% if creator %}<div class="small-muted mt-2 pt-2 border-top">Created by {{ creator.name }} ({{ creator.role }})</div>{% endif %}
+      </div>
+    </div>
   </div>
+
+  <!-- Edit form -->
   <div class="col-md-7">
-    <div class="card"><div class="card-body">
-      <h5 class="mb-2">
-        <a class="text-decoration-none text-dark" data-bs-toggle="collapse" href="#auditCollapse" role="button">
-          Audit trail <small class="text-muted fw-normal">({{ audit_entries|length }} entries)</small>
-        </a>
-      </h5>
-      <div class="collapse" id="auditCollapse">
-        {% if audit_entries %}
+    <div class="card">
+      <div class="card-header">{% if can_edit %}Edit{% else %}View only{% endif %}</div>
+      <div class="card-body">
+        {% if can_edit %}
+        <form method="post">
+          {% for item in display_fields %}
+            {% set field = item.field %}
+            {% if field.type == 'textarea' %}
+              <div class="mb-2"><label class="form-label small fw-semibold">{{ field.label }}</label><textarea class="form-control" name="{{ field.name }}">{{ item.value }}</textarea></div>
+            {% elif field.type == 'select' %}
+              <div class="mb-2"><label class="form-label small fw-semibold">{{ field.label }}</label>
+              <select class="form-select form-select-sm" name="{{ field.name }}" {% if field.name == 'role' and not is_manager and obj.id == current_user.id %}disabled{% endif %}>
+                {% for value, label in item.options %}<option value="{{ value }}" {% if value|string == item.value|string %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select></div>
+            {% elif field.type == 'checkbox' %}
+              <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="{{ field.name }}" id="{{ field.name }}" {% if item.value %}checked{% endif %}><label class="form-check-label small" for="{{ field.name }}">{{ field.label }}</label></div>
+            {% elif field.type == 'date' %}
+              <div class="mb-2"><label class="form-label small fw-semibold">{{ field.label }}</label><input class="form-control form-control-sm" type="date" name="{{ field.name }}" value="{{ item.value }}"></div>
+            {% elif field.type == 'datetime' %}
+              <div class="mb-2"><label class="form-label small fw-semibold">{{ field.label }}</label><input class="form-control form-control-sm" type="datetime-local" name="{{ field.name }}" value="{{ item.value }}"></div>
+            {% elif field.type == 'float' %}
+              <div class="mb-2"><label class="form-label small fw-semibold">{{ field.label }}</label><input class="form-control form-control-sm" type="number" step="0.01" name="{{ field.name }}" value="{{ item.value }}"></div>
+            {% elif field.type == 'int' %}
+              <div class="mb-2"><label class="form-label small fw-semibold">{{ field.label }}</label><input class="form-control form-control-sm" type="number" name="{{ field.name }}" value="{{ item.value }}"></div>
+            {% elif field.type == 'password' %}
+              <div class="mb-2"><label class="form-label small fw-semibold">{{ field.label }}</label><input class="form-control form-control-sm" type="password" name="{{ field.name }}" placeholder="Leave blank to keep current"></div>
+            {% else %}
+              <div class="mb-2"><label class="form-label small fw-semibold">{{ field.label }}</label><input class="form-control form-control-sm" {% if field.type == 'email' %}type="email"{% endif %} name="{{ field.name }}" value="{{ item.value }}"></div>
+            {% endif %}
+          {% endfor %}
+          <button class="btn btn-dark btn-sm mt-1">Save changes</button>
+        </form>
+        {% else %}
+          <p class="small-muted mb-0">Only managers or the record owner can edit this.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ─────────── PROJECT-SPECIFIC SECTIONS ─────────── #}
+{% if kind == 'projects' %}
+
+<!-- Project Team / Assignees -->
+<div class="row g-3 mt-1">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">Project Team</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('add_project_member', project_id=obj.id) }}" class="d-flex gap-2 mb-3 flex-wrap">
+          <select class="form-select form-select-sm" name="user_id" style="max-width:180px">
+            {% for u in all_users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
+          </select>
+          <select class="form-select form-select-sm" name="role" style="max-width:160px">
+            <option value="lead researcher">Lead Researcher</option>
+            <option value="contributor">Contributor</option>
+            <option value="observer">Observer</option>
+            <option value="advisor">Advisor</option>
+          </select>
+          <button class="btn btn-sm btn-outline-dark">Add member</button>
+        </form>
+        {% if project_members %}
+        <div class="table-responsive">
         <table class="table table-sm mb-0">
-          <tr><th>When</th><th>Who</th><th>Action</th><th>Field → change</th></tr>
-          {% for e in audit_entries %}
+          <tr><th>Name</th><th>Role</th><th>User role</th><th></th></tr>
+          {% for m in project_members %}
           <tr>
-            <td class="small-muted text-nowrap">{{ e.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-            <td>{{ e.user.name if e.user else '—' }}</td>
-            <td><span class="badge {% if e.action == 'create' %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ e.action }}</span></td>
-            <td class="small-muted">
-              {% if e.field_changed %}
-                <strong>{{ e.field_changed }}</strong>:
-                {{ (e.old_value or '—')[:40] }} → {{ (e.new_value or '—')[:40] }}
+            <td>{{ m.user.name if m.user else '?' }}</td>
+            <td><span class="agenda-pill">{{ m.role }}</span></td>
+            <td class="small-muted">{{ m.user.role if m.user else '' }}</td>
+            <td>
+              {% if is_manager %}
+              <form method="post" action="{{ url_for('remove_project_member', project_id=obj.id, mid=m.id) }}" class="d-inline">
+                <button class="btn btn-sm btn-link text-danger p-0">remove</button>
+              </form>
               {% endif %}
             </td>
           </tr>
           {% endfor %}
         </table>
-        {% else %}
-        <p class="small-muted mb-0">No changes recorded yet.</p>
-        {% endif %}
+        </div>
+        {% else %}<p class="small-muted mb-0">No team members assigned.</p>{% endif %}
       </div>
-    </div></div>
+    </div>
+  </div>
+
+  <!-- Budget summary -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        Project Budget
+        <a href="{{ url_for('budget') }}" class="small-muted">full ledger →</a>
+      </div>
+      <div class="card-body">
+        {% if project_budget_summary %}
+        <div class="row g-2 mb-3">
+          <div class="col"><div class="p-2 bg-light rounded text-center"><div class="small-muted">Allocated</div><div class="fw-bold">€{{ '%.0f'|format(project_budget_summary.allocation) }}</div></div></div>
+          <div class="col"><div class="p-2 bg-light rounded text-center"><div class="small-muted">Income</div><div class="fw-bold text-success">€{{ '%.0f'|format(project_budget_summary.income) }}</div></div></div>
+          <div class="col"><div class="p-2 bg-light rounded text-center"><div class="small-muted">Expense</div><div class="fw-bold text-danger">€{{ '%.0f'|format(project_budget_summary.expense) }}</div></div></div>
+          <div class="col"><div class="p-2 bg-light rounded text-center"><div class="small-muted">Net</div><div class="fw-bold">€{{ '%.0f'|format(project_budget_summary.net) }}</div></div></div>
+        </div>
+        {% endif %}
+        {% if project_budget_items %}
+        <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <tr><th>Date</th><th>Category</th><th>Dir.</th><th>Amount</th></tr>
+          {% for i in project_budget_items[:6] %}
+          <tr><td class="small-muted">{{ i.item_date }}</td><td><a href="{{ url_for('record_detail', kind='budget', record_id=i.id) }}" class="primary-link">{{ i.category }}</a></td><td class="small-muted">{{ i.direction }}</td><td>€{{ '%.0f'|format(i.amount) }}</td></tr>
+          {% endfor %}
+          {% if project_budget_items|length > 6 %}<tr><td colspan="4" class="small-muted">+ {{ project_budget_items|length - 6 }} more items</td></tr>{% endif %}
+        </table>
+        </div>
+        {% else %}<p class="small-muted mb-0">No budget items linked to this project.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Milestones + Tasks -->
+<div class="row g-3 mt-1">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">Milestones</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('add_milestone', project_id=obj.id) }}" class="mb-3">
+          <div class="row g-1 mb-1">
+            <div class="col-8"><input class="form-control form-control-sm" name="title" placeholder="Milestone title" required></div>
+            <div class="col-4"><input type="date" class="form-control form-control-sm" name="target_date"></div>
+          </div>
+          <div class="row g-1 mb-1">
+            <div class="col-6">
+              <select class="form-select form-select-sm" name="status">
+                <option value="pending">pending</option><option value="reached">reached</option><option value="missed">missed</option>
+              </select>
+            </div>
+            <div class="col-6"><input class="form-control form-control-sm" name="description" placeholder="Notes"></div>
+          </div>
+          <button class="btn btn-sm btn-outline-dark">Add milestone</button>
+        </form>
+        {% if project_milestones %}
+        <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <tr><th>Milestone</th><th>Target</th><th>Status</th><th></th></tr>
+          {% for m in project_milestones %}
+          <tr>
+            <td>{{ m.title }}</td>
+            <td class="small-muted">{{ m.target_date or '—' }}</td>
+            <td><span class="status-badge status-{{ m.status }}">{{ m.status }}</span></td>
+            <td><a href="{{ url_for('record_detail', kind='milestones', record_id=m.id) }}" class="btn btn-sm btn-link p-0">edit</a></td>
+          </tr>
+          {% endfor %}
+        </table>
+        </div>
+        {% else %}<p class="small-muted mb-0">No milestones yet.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">Tasks <a href="{{ url_for('tasks') }}?entity_type=projects&entity_id={{ obj.id }}" class="small-muted">all →</a></div>
+      <div class="card-body">
+        {% if project_tasks %}
+        <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <tr><th>Task</th><th>Assignee</th><th>Status</th><th></th></tr>
+          {% for t in project_tasks %}
+          <tr>
+            <td><a href="{{ url_for('record_detail', kind='tasks', record_id=t.id) }}" class="primary-link">{{ t.title }}</a></td>
+            <td class="small-muted">{{ t.assignee.name if t.assignee else '—' }}</td>
+            <td><span class="status-badge status-{{ t.status }}">{{ t.status }}</span></td>
+            <td>
+              <form method="post" action="{{ url_for('update_task_status', task_id=t.id) }}" class="d-inline">
+                <input type="hidden" name="status" value="{{ 'done' if t.status != 'done' else 'todo' }}">
+                <button class="btn btn-sm btn-link p-0">{{ '✓' if t.status != 'done' else '↩' }}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+        </div>
+        {% else %}<p class="small-muted mb-0">No tasks for this project.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Research Journal -->
+<div class="card mt-3">
+  <div class="card-header">Research Journal</div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('sessions') }}" class="mb-3 pb-3 border-bottom">
+      <input type="hidden" name="project_id" value="{{ obj.id }}">
+      <div class="row g-2 mb-2">
+        <div class="col-md-3"><input type="date" class="form-control form-control-sm" name="session_date" required></div>
+        <div class="col-md-3"><input class="form-control form-control-sm" name="facilitator" placeholder="Facilitator" value="{{ current_user.name }}" required></div>
+        <div class="col-md-6"><input class="form-control form-control-sm" name="participants" placeholder="Participants"></div>
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col-md-4"><textarea class="form-control form-control-sm" name="methods_used" placeholder="Methods used" style="min-height:55px"></textarea></div>
+        <div class="col-md-4"><textarea class="form-control form-control-sm" name="observations" placeholder="Observations" style="min-height:55px"></textarea></div>
+        <div class="col-md-4"><textarea class="form-control form-control-sm" name="open_questions" placeholder="Open questions" style="min-height:55px"></textarea></div>
+      </div>
+      <button class="btn btn-sm btn-outline-dark">Log session</button>
+    </form>
+    {% if rs_sessions %}
+    <div class="table-responsive">
+    <table class="table table-sm">
+      <tr><th>Date</th><th>Facilitator</th><th>Methods</th><th>Observations</th><th>Questions</th><th></th></tr>
+      {% for s in rs_sessions %}
+      <tr>
+        <td class="text-nowrap">{{ s.session_date }}</td>
+        <td>{{ s.facilitator }}</td>
+        <td class="small-muted">{{ s.methods_used[:60] }}{% if s.methods_used|length > 60 %}…{% endif %}</td>
+        <td>{{ s.observations[:100] }}{% if s.observations|length > 100 %}…{% endif %}</td>
+        <td class="small-muted">{{ s.open_questions[:60] }}{% if s.open_questions|length > 60 %}…{% endif %}</td>
+        <td><a href="{{ url_for('record_detail', kind='sessions', record_id=s.id) }}" class="btn btn-sm btn-link p-0">edit</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+    {% else %}<p class="small-muted mb-0">No sessions logged yet.</p>{% endif %}
+  </div>
+</div>
+{% endif %}
+
+{# ─────────── MEETING-SPECIFIC SECTIONS ─────────── #}
+{% if kind == 'governance' %}
+<div class="card mt-3">
+  <div class="card-header">Decision Trail — Proposals</div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('proposals') }}" class="mb-3 pb-3 border-bottom">
+      <input type="hidden" name="meeting_id" value="{{ obj.id }}">
+      <div class="row g-2 mb-2">
+        <div class="col-md-8"><textarea class="form-control form-control-sm" name="proposal_text" placeholder="Proposal text" required style="min-height:55px"></textarea></div>
+        <div class="col-md-4">
+          <input class="form-control form-control-sm mb-1" name="proposer" placeholder="Proposer" value="{{ current_user.name }}">
+          <select class="form-select form-select-sm" name="outcome"><option value="pending">pending</option><option value="approved">approved</option><option value="rejected">rejected</option><option value="deferred">deferred</option></select>
+        </div>
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col-3"><input class="form-control form-control-sm" type="number" name="votes_for" placeholder="For" value="0" min="0"></div>
+        <div class="col-3"><input class="form-control form-control-sm" type="number" name="votes_against" placeholder="Against" value="0" min="0"></div>
+        <div class="col-6"><input class="form-control form-control-sm" name="dissenting_notes" placeholder="Dissenting notes (optional)"></div>
+      </div>
+      <button class="btn btn-sm btn-outline-dark">Record proposal</button>
+    </form>
+    {% if meeting_proposals %}
+    <div class="table-responsive">
+    <table class="table table-sm">
+      <tr><th>Proposal</th><th>Proposer</th><th>Outcome</th><th>For/Against</th><th>Dissent</th><th></th></tr>
+      {% for p in meeting_proposals %}
+      <tr>
+        <td>{{ p.proposal_text[:120] }}{% if p.proposal_text|length > 120 %}…{% endif %}</td>
+        <td>{{ p.proposer }}</td>
+        <td><span class="status-badge {% if p.outcome == 'approved' %}status-done{% elif p.outcome == 'rejected' %}status-blocked{% elif p.outcome == 'deferred' %}status-pending{% else %}status-pending{% endif %}">{{ p.outcome }}</span></td>
+        <td class="small-muted">{{ p.votes_for }}/{{ p.votes_against }}</td>
+        <td class="small-muted">{{ p.dissenting_notes[:60] }}{% if p.dissenting_notes|length > 60 %}…{% endif %}</td>
+        <td><a href="{{ url_for('record_detail', kind='proposals', record_id=p.id) }}" class="btn btn-sm btn-link p-0">edit</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+    {% else %}<p class="small-muted mb-0">No proposals recorded yet.</p>{% endif %}
+  </div>
+</div>
+{% endif %}
+
+{# ─────────── FACILITY-SPECIFIC SECTIONS ─────────── #}
+{% if kind == 'facilities' %}
+<div class="card mt-3">
+  <div class="card-header d-flex justify-content-between">
+    Equipment in this facility
+    <a href="{{ url_for('equipment') }}" class="small-muted">manage equipment →</a>
+  </div>
+  <div class="card-body">
+    {% if facility_equipment %}
+    <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <tr><th>Name</th><th>Category</th><th>Status</th><th>Portable</th><th></th></tr>
+      {% for e in facility_equipment %}
+      <tr>
+        <td><a href="{{ url_for('record_detail', kind='equipment', record_id=e.id) }}" class="primary-link">{{ e.name }}</a></td>
+        <td class="small-muted">{{ e.category }}</td>
+        <td><span class="status-badge status-{{ e.status }}">{{ e.status }}</span></td>
+        <td class="small-muted">{{ 'Yes' if e.portable else 'No' }}</td>
+        <td></td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+    {% else %}<p class="small-muted mb-0">No equipment assigned to this facility.</p>{% endif %}
+  </div>
+</div>
+{% endif %}
+
+{# ─────────── WORKING GROUP SECTIONS ─────────── #}
+{% if kind == 'working_groups' %}
+<div class="card mt-3">
+  <div class="card-header">Members</div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('add_wg_member', wg_id=obj.id) }}" class="d-flex gap-2 mb-3 flex-wrap">
+      <select class="form-select form-select-sm" name="user_id" style="max-width:200px">
+        {% for u in all_users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
+      </select>
+      <select class="form-select form-select-sm" name="role" style="max-width:160px">
+        <option value="lead">Lead</option>
+        <option value="member" selected>Member</option>
+        <option value="advisor">Advisor</option>
+        <option value="observer">Observer</option>
+      </select>
+      <button class="btn btn-sm btn-outline-dark">Add member</button>
+    </form>
+    {% if wg_memberships %}
+    <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <tr><th>Name</th><th>Role</th><th>Platform role</th><th></th></tr>
+      {% for m in wg_memberships %}
+      <tr>
+        <td>{{ m.user.name if m.user else '?' }}</td>
+        <td><span class="agenda-pill">{{ m.role }}</span></td>
+        <td class="small-muted">{{ m.user.role if m.user else '' }}</td>
+        <td>
+          {% if is_manager %}
+          <form method="post" action="{{ url_for('remove_wg_member', wg_id=obj.id, mid=m.id) }}" class="d-inline">
+            <button class="btn btn-sm btn-link text-danger p-0">remove</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+    {% else %}<p class="small-muted mb-0">No members yet.</p>{% endif %}
+  </div>
+</div>
+{% endif %}
+
+{# ─────────── SHARED SECTIONS: Attachments + Audit ─────────── #}
+<div class="row g-3 mt-1">
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-header">Attachments</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('upload_attachment', kind=kind, record_id=obj.id) }}" enctype="multipart/form-data" class="mb-3">
+          <div class="input-group input-group-sm">
+            <input type="file" class="form-control" name="file" required>
+            <button class="btn btn-outline-dark">Upload</button>
+          </div>
+        </form>
+        {% if attachments %}
+        <ul class="list-group list-group-flush">
+          {% for att in attachments %}
+          <li class="list-group-item px-0 py-1">
+            <a href="{{ url_for('uploaded_file', filename=att.filename) }}" target="_blank" class="d-block">{{ att.original_name }}</a>
+            <div class="small-muted">{{ att.uploaded_at.strftime('%Y-%m-%d') }}{% if att.uploader %} · {{ att.uploader.name }}{% endif %}</div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}<p class="small-muted mb-0">No files attached.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header">
+        <a class="text-decoration-none text-dark d-flex justify-content-between" data-bs-toggle="collapse" href="#auditCollapse">
+          <span>Audit trail</span>
+          <span class="small-muted fw-normal">{{ audit_entries|length }} entries</span>
+        </a>
+      </div>
+      <div class="collapse" id="auditCollapse">
+        <div class="card-body p-0">
+          {% if audit_entries %}
+          <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <tr><th>When</th><th>Who</th><th>Action</th><th>Change</th></tr>
+            {% for e in audit_entries %}
+            <tr>
+              <td class="small-muted text-nowrap">{{ e.timestamp.strftime('%m-%d %H:%M') }}</td>
+              <td class="small-muted">{{ e.user.name if e.user else '—' }}</td>
+              <td><span class="status-badge {% if e.action == 'create' %}status-done{% else %}status-pending{% endif %}">{{ e.action }}</span></td>
+              <td class="small-muted" style="font-size:0.76rem">
+                {% if e.field_changed %}<strong>{{ e.field_changed }}</strong>: {{ (e.old_value or '—')[:35] }} → {{ (e.new_value or '—')[:35] }}{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </table>
+          </div>
+          {% else %}<div class="p-3 small-muted">No changes recorded.</div>{% endif %}
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

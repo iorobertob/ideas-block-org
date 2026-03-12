@@ -1,0 +1,68 @@
+{% extends 'base.html' %}{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <h1>New Poll</h1>
+  <a href="{{ url_for('polls') }}" class="btn btn-outline-secondary btn-sm">← Polls</a>
+</div>
+
+<div class="row">
+<div class="col-md-8 col-lg-6">
+<div class="card">
+<div class="card-body">
+<form method="post" id="pollForm">
+  <div class="mb-3">
+    <label class="form-label fw-semibold">Poll question / title</label>
+    <input class="form-control" name="title" placeholder="What should we…?" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label fw-semibold">Description <span class="fw-normal small-muted">(optional)</span></label>
+    <textarea class="form-control" name="description" placeholder="Context, instructions…" style="min-height:80px"></textarea>
+  </div>
+  <div class="row g-2 mb-3">
+    <div class="col-md-6">
+      <label class="form-label fw-semibold">Choice type</label>
+      <select class="form-select" name="poll_type">
+        <option value="single">Single choice</option>
+        <option value="multiple">Multiple choice</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label fw-semibold">Deadline <span class="fw-normal small-muted">(optional)</span></label>
+      <input class="form-control" type="datetime-local" name="deadline">
+    </div>
+  </div>
+  <div class="mb-3">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="is_public" id="isPublic">
+      <label class="form-check-label" for="isPublic">
+        <strong>Public poll</strong> — generates a shareable link (no login required)
+      </label>
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label fw-semibold">Options</label>
+    <div id="optionsContainer">
+      <input class="form-control mb-2" name="option_text" placeholder="Option 1" required>
+      <input class="form-control mb-2" name="option_text" placeholder="Option 2" required>
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="addOption">+ Add option</button>
+  </div>
+
+  <button class="btn btn-dark">Create poll</button>
+</form>
+</div>
+</div>
+</div>
+</div>
+<script>
+document.getElementById('addOption').addEventListener('click', function() {
+  var container = document.getElementById('optionsContainer');
+  var count = container.querySelectorAll('input').length + 1;
+  var inp = document.createElement('input');
+  inp.className = 'form-control mb-2';
+  inp.name = 'option_text';
+  inp.placeholder = 'Option ' + count;
+  container.appendChild(inp);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends 'base.html' %}{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div>
+    <h1>Roadmap Timeline</h1>
+    <div class="small-muted">Visual timeline of Phase I &amp; II milestones</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('roadmap') }}" class="btn btn-outline-secondary btn-sm">List view</a>
+  </div>
+</div>
+
+{% if not items %}
+<div class="card"><div class="card-body small-muted">No roadmap items yet. <a href="{{ url_for('roadmap') }}">Add items.</a></div></div>
+{% else %}
+
+{% for year in years %}
+<div class="mb-4">
+  <div class="d-flex align-items-center gap-3 mb-3">
+    <div style="font-size:1.3rem;font-weight:700;min-width:60px">{{ year }}</div>
+    <div style="flex:1;height:2px;background:var(--k-border)"></div>
+  </div>
+
+  <div class="row g-2">
+    {% for item in by_year.get(year, []) %}
+    <div class="col-md-6 col-xl-4">
+      <div class="card h-100" style="border-left: 3px solid {% if item.phase == 'phase_i' %}#2d4a6b{% elif item.phase == 'phase_ii' %}#4a2d6b{% else %}#5c7c5c{% endif %}">
+        <div class="card-body py-2 px-3">
+          <div class="d-flex justify-content-between align-items-start mb-1">
+            <a href="{{ url_for('record_detail', kind='roadmap', record_id=item.id) }}" class="primary-link fw-semibold" style="font-size:0.93rem">{{ item.title }}</a>
+            <span class="status-badge status-{{ item.status }} ms-2" style="white-space:nowrap">{{ item.status }}</span>
+          </div>
+          <div class="small-muted d-flex gap-2 flex-wrap">
+            <span class="{% if item.phase == 'phase_i' %}badge-phase-i{% elif item.phase == 'phase_ii' %}badge-phase-ii{% else %}badge-pilot{% endif %} agenda-pill">{{ item.phase }}</span>
+            {% if item.owner %}<span>{{ item.owner }}</span>{% endif %}
+            {% if item.start_date and item.end_date %}
+            <span>{{ item.start_date }} → {{ item.end_date }}</span>
+            {% elif item.start_date %}
+            <span>from {{ item.start_date }}</span>
+            {% endif %}
+          </div>
+          {% if item.details %}<div class="small mt-1" style="font-size:0.8rem;color:#444">{{ item.details[:120] }}{% if item.details|length > 120 %}…{% endif %}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+<!-- Phase legend -->
+<div class="d-flex gap-3 mt-4 small-muted flex-wrap">
+  <span><span style="display:inline-block;width:10px;height:10px;background:#2d4a6b;border-radius:2px;margin-right:4px"></span>Phase I</span>
+  <span><span style="display:inline-block;width:10px;height:10px;background:#4a2d6b;border-radius:2px;margin-right:4px"></span>Phase II</span>
+  <span><span style="display:inline-block;width:10px;height:10px;background:#5c7c5c;border-radius:2px;margin-right:4px"></span>Pilot</span>
+  <span class="ms-auto">{{ items|length }} item{{ 's' if items|length != 1 }} total</span>
+</div>
+{% endif %}
+{% endblock %}

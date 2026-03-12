@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory
+from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory, jsonify
 from datetime import datetime, date
 import calendar as cal_module
 import os
@@ -9,9 +9,16 @@ from .models import (
     db, User, Institution, Partnership, ResearchProject, Booking, Equipment,
     BudgetItem, Meeting, PolicyDocument, RiskRegister, RoadmapItem,
     ProtocolRule, DisseminationEvent, MonthlyReport,
-    AuditLog, ResearchSession, ProposalRecord, Attachment
+    AuditLog, ResearchSession, ProposalRecord, Attachment,
+    WorkingGroup, WorkingGroupMembership, ProjectMembership,
+    Milestone, Task, Facility, ConstitutionDocument,
+    Poll, PollOption, PollVote, PollToken
 )
 
+
+# ─────────────────────────────────────────────
+# Auth helpers
+# ─────────────────────────────────────────────
 
 def current_user():
     uid = session.get('user_id')
@@ -37,6 +44,10 @@ def can_edit_record(obj, user=None):
         return is_manager(user) or obj.id == user.id
     return is_manager(user) or getattr(obj, 'created_by_id', None) == user.id
 
+
+# ─────────────────────────────────────────────
+# Field helpers
+# ─────────────────────────────────────────────
 
 def parse_date(v):
     return datetime.strptime(v, '%Y-%m-%d').date() if v else None
@@ -87,6 +98,14 @@ def select_options_for(field_name):
         return [(str(i.id), i.name) for i in Institution.query.order_by(Institution.name).all()]
     if field_name == 'meeting_id':
         return [(str(m.id), f"{m.meeting_date} · {m.title}") for m in Meeting.query.order_by(Meeting.meeting_date.desc()).all()]
+    if field_name == 'facility_id':
+        return [(str(f.id), f.name) for f in Facility.query.order_by(Facility.name).all()]
+    if field_name == 'assigned_to_id':
+        return [(str(u.id), f"{u.name} ({u.role})") for u in User.query.order_by(User.name).all()]
+    if field_name == 'milestone_id':
+        return [(str(m.id), f"{m.title} [{m.project.title if m.project else '?'}]") for m in Milestone.query.all()]
+    if field_name == 'working_group_id':
+        return [(str(wg.id), wg.name) for wg in WorkingGroup.query.order_by(WorkingGroup.name).all()]
     return []
 
 
@@ -125,6 +144,10 @@ def _log_field_changes(entity_type, entity_id, old_vals, new_vals):
             ))
 
 
+# ─────────────────────────────────────────────
+# RECORD_CONFIG
+# ─────────────────────────────────────────────
+
 RECORD_CONFIG = {
     'users': {
         'model': User,
@@ -153,6 +176,7 @@ RECORD_CONFIG = {
             {'name': 'research_question', 'label': 'Research question', 'type': 'textarea'},
             {'name': 'methods', 'label': 'Methods', 'type': 'textarea'},
             {'name': 'outputs', 'label': 'Outputs', 'type': 'textarea'},
+            {'name': 'budget_allocation', 'label': 'Budget allocation (€)', 'type': 'float'},
             {'name': 'start_date', 'label': 'Start date', 'type': 'date'},
             {'name': 'end_date', 'label': 'End date', 'type': 'date'},
         ],
@@ -183,7 +207,10 @@ RECORD_CONFIG = {
             {'name': 'name', 'label': 'Name'}, {'name': 'category', 'label': 'Category'},
             {'name': 'portable', 'label': 'Portable', 'type': 'checkbox'},
             {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('available', 'available'), ('in_use', 'in_use'), ('maintenance', 'maintenance'), ('reserved', 'reserved')]},
-            {'name': 'owner', 'label': 'Owner'}, {'name': 'transfer_plan', 'label': 'Transfer plan', 'type': 'textarea'},
+            {'name': 'owner', 'label': 'Owner'},
+            {'name': 'transfer_plan', 'label': 'Transfer plan', 'type': 'textarea'},
+            {'name': 'facility_id', 'label': 'Facility', 'type': 'select', 'nullable': True,
+             'options_provider': lambda fn: [('', '— none —')] + select_options_for(fn)},
         ],
     },
     'budget': {
@@ -209,9 +236,13 @@ RECORD_CONFIG = {
         'list_endpoint': 'governance',
         'summary': lambda o: o.title,
         'fields': [
-            {'name': 'title', 'label': 'Title'}, {'name': 'meeting_date', 'label': 'Meeting date', 'type': 'date'},
-            {'name': 'meeting_type', 'label': 'Meeting type', 'type': 'select', 'choices': [('steering', 'steering'), ('operations', 'operations'), ('working_group', 'working_group')]},
-            {'name': 'body', 'label': 'Body', 'type': 'textarea'}, {'name': 'decisions', 'label': 'Decisions', 'type': 'textarea'},
+            {'name': 'title', 'label': 'Title'},
+            {'name': 'meeting_date', 'label': 'Meeting date', 'type': 'date'},
+            {'name': 'meeting_type', 'label': 'Meeting type', 'type': 'select', 'choices': [('steering', 'steering'), ('operations', 'operations'), ('working_group', 'working_group'), ('curating', 'curating'), ('partnership', 'partnership')]},
+            {'name': 'working_group_id', 'label': 'Working Group', 'type': 'select', 'nullable': True,
+             'options_provider': lambda fn: [('', '— none —')] + select_options_for(fn)},
+            {'name': 'body', 'label': 'Body', 'type': 'textarea'},
+            {'name': 'decisions', 'label': 'Decisions', 'type': 'textarea'},
         ],
     },
     'institutions': {
@@ -221,7 +252,10 @@ RECORD_CONFIG = {
         'list_endpoint': 'partnerships',
         'summary': lambda o: o.name,
         'fields': [
-            {'name': 'name', 'label': 'Name'}, {'name': 'category', 'label': 'Category'}, {'name': 'contact_person', 'label': 'Contact person'}, {'name': 'contact_email', 'label': 'Contact email', 'type': 'email'}, {'name': 'notes', 'label': 'Notes', 'type': 'textarea'},
+            {'name': 'name', 'label': 'Name'}, {'name': 'category', 'label': 'Category'},
+            {'name': 'contact_person', 'label': 'Contact person'},
+            {'name': 'contact_email', 'label': 'Contact email', 'type': 'email'},
+            {'name': 'notes', 'label': 'Notes', 'type': 'textarea'},
         ],
     },
     'partnerships': {
@@ -233,7 +267,11 @@ RECORD_CONFIG = {
         'fields': [
             {'name': 'institution_id', 'label': 'Institution', 'type': 'select', 'options_provider': select_options_for},
             {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('prospective', 'prospective'), ('active', 'active'), ('closed', 'closed')]},
-            {'name': 'objective', 'label': 'Objective', 'type': 'textarea'}, {'name': 'requested_support', 'label': 'Requested support', 'type': 'textarea'}, {'name': 'timeline', 'label': 'Timeline'},
+            {'name': 'objective', 'label': 'Objective', 'type': 'textarea'},
+            {'name': 'requested_support', 'label': 'Requested support', 'type': 'textarea'},
+            {'name': 'intellectual_contributions', 'label': 'Intellectual contributions', 'type': 'textarea'},
+            {'name': 'renewal_intention', 'label': 'Renewal intention', 'type': 'select', 'choices': [('', '—'), ('yes', 'yes'), ('no', 'no'), ('maybe', 'maybe')]},
+            {'name': 'timeline', 'label': 'Timeline'},
         ],
     },
     'protocol': {
@@ -243,7 +281,9 @@ RECORD_CONFIG = {
         'list_endpoint': 'protocol',
         'summary': lambda o: o.principle,
         'fields': [
-            {'name': 'principle', 'label': 'Principle'}, {'name': 'description', 'label': 'Description', 'type': 'textarea'}, {'name': 'implementation', 'label': 'Implementation', 'type': 'textarea'},
+            {'name': 'principle', 'label': 'Principle'},
+            {'name': 'description', 'label': 'Description', 'type': 'textarea'},
+            {'name': 'implementation', 'label': 'Implementation', 'type': 'textarea'},
         ],
     },
     'policies': {
@@ -253,7 +293,9 @@ RECORD_CONFIG = {
         'list_endpoint': 'policies',
         'summary': lambda o: o.title,
         'fields': [
-            {'name': 'title', 'label': 'Title'}, {'name': 'category', 'label': 'Category'}, {'name': 'version', 'label': 'Version'}, {'name': 'content', 'label': 'Content', 'type': 'textarea'},
+            {'name': 'title', 'label': 'Title'}, {'name': 'category', 'label': 'Category'},
+            {'name': 'version', 'label': 'Version'},
+            {'name': 'content', 'label': 'Content', 'type': 'textarea'},
         ],
     },
     'risks': {
@@ -263,7 +305,11 @@ RECORD_CONFIG = {
         'list_endpoint': 'risks',
         'summary': lambda o: o.title,
         'fields': [
-            {'name': 'title', 'label': 'Title'}, {'name': 'severity', 'label': 'Severity', 'type': 'select', 'choices': [('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High')]}, {'name': 'owner', 'label': 'Owner'}, {'name': 'mitigation', 'label': 'Mitigation', 'type': 'textarea'}, {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('open', 'open'), ('monitoring', 'monitoring'), ('closed', 'closed')]},
+            {'name': 'title', 'label': 'Title'},
+            {'name': 'severity', 'label': 'Severity', 'type': 'select', 'choices': [('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High')]},
+            {'name': 'owner', 'label': 'Owner'},
+            {'name': 'mitigation', 'label': 'Mitigation', 'type': 'textarea'},
+            {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('open', 'open'), ('monitoring', 'monitoring'), ('closed', 'closed')]},
         ],
     },
     'roadmap': {
@@ -273,7 +319,14 @@ RECORD_CONFIG = {
         'list_endpoint': 'roadmap',
         'summary': lambda o: o.title,
         'fields': [
-            {'name': 'phase', 'label': 'Phase', 'type': 'select', 'choices': [('phase_i', 'Phase I'), ('phase_ii', 'Phase II')]}, {'name': 'title', 'label': 'Title'}, {'name': 'year', 'label': 'Year', 'type': 'int'}, {'name': 'owner', 'label': 'Owner'}, {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('planned', 'planned'), ('in_progress', 'in_progress'), ('completed', 'completed')]}, {'name': 'details', 'label': 'Details', 'type': 'textarea'},
+            {'name': 'phase', 'label': 'Phase', 'type': 'select', 'choices': [('phase_i', 'Phase I'), ('phase_ii', 'Phase II')]},
+            {'name': 'title', 'label': 'Title'},
+            {'name': 'year', 'label': 'Year', 'type': 'int'},
+            {'name': 'owner', 'label': 'Owner'},
+            {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('planned', 'planned'), ('in_progress', 'in_progress'), ('completed', 'completed')]},
+            {'name': 'details', 'label': 'Details', 'type': 'textarea'},
+            {'name': 'start_date', 'label': 'Start date', 'type': 'date'},
+            {'name': 'end_date', 'label': 'End date', 'type': 'date'},
         ],
     },
     'events': {
@@ -283,7 +336,14 @@ RECORD_CONFIG = {
         'list_endpoint': 'events',
         'summary': lambda o: o.title,
         'fields': [
-            {'name': 'title', 'label': 'Title'}, {'name': 'event_date', 'label': 'Event date', 'type': 'date'}, {'name': 'format', 'label': 'Format'}, {'name': 'audience', 'label': 'Audience'}, {'name': 'linked_project', 'label': 'Linked project'}, {'name': 'notes', 'label': 'Notes', 'type': 'textarea'},
+            {'name': 'title', 'label': 'Title'},
+            {'name': 'event_date', 'label': 'Event date', 'type': 'date'},
+            {'name': 'format', 'label': 'Format'},
+            {'name': 'audience', 'label': 'Audience'},
+            {'name': 'location', 'label': 'Location'},
+            {'name': 'project_id', 'label': 'Project', 'type': 'select', 'nullable': True,
+             'options_provider': lambda fn: [('', '— none —')] + select_options_for(fn)},
+            {'name': 'notes', 'label': 'Notes', 'type': 'textarea'},
         ],
     },
     'reports': {
@@ -293,7 +353,8 @@ RECORD_CONFIG = {
         'list_endpoint': 'reports',
         'summary': lambda o: o.month,
         'fields': [
-            {'name': 'month', 'label': 'Month'}, {'name': 'summary', 'label': 'Summary', 'type': 'textarea'},
+            {'name': 'month', 'label': 'Month'},
+            {'name': 'summary', 'label': 'Summary', 'type': 'textarea'},
         ],
     },
     'sessions': {
@@ -326,6 +387,83 @@ RECORD_CONFIG = {
             {'name': 'votes_for', 'label': 'Votes for', 'type': 'int'},
             {'name': 'votes_against', 'label': 'Votes against', 'type': 'int'},
             {'name': 'dissenting_notes', 'label': 'Dissenting notes', 'type': 'textarea'},
+        ],
+    },
+    'tasks': {
+        'model': Task,
+        'title': 'Tasks',
+        'singular': 'Task',
+        'list_endpoint': 'tasks',
+        'summary': lambda o: o.title,
+        'fields': [
+            {'name': 'title', 'label': 'Title'},
+            {'name': 'description', 'label': 'Description', 'type': 'textarea'},
+            {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('todo', 'To do'), ('in_progress', 'In progress'), ('done', 'Done'), ('blocked', 'Blocked')]},
+            {'name': 'priority', 'label': 'Priority', 'type': 'select', 'choices': [('low', 'Low'), ('normal', 'Normal'), ('high', 'High'), ('urgent', 'Urgent')]},
+            {'name': 'due_date', 'label': 'Due date', 'type': 'date'},
+            {'name': 'assigned_to_id', 'label': 'Assignee', 'type': 'select', 'nullable': True,
+             'options_provider': lambda fn: [('', '— unassigned —')] + select_options_for(fn)},
+        ],
+    },
+    'milestones': {
+        'model': Milestone,
+        'title': 'Milestones',
+        'singular': 'Milestone',
+        'list_endpoint': 'projects',
+        'summary': lambda o: f"{o.title} [{o.project.title if o.project else '?'}]",
+        'fields': [
+            {'name': 'project_id', 'label': 'Project', 'type': 'select', 'options_provider': select_options_for},
+            {'name': 'title', 'label': 'Title'},
+            {'name': 'target_date', 'label': 'Target date', 'type': 'date'},
+            {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('pending', 'pending'), ('reached', 'reached'), ('missed', 'missed')]},
+            {'name': 'description', 'label': 'Description', 'type': 'textarea'},
+        ],
+    },
+    'facilities': {
+        'model': Facility,
+        'title': 'Facilities',
+        'singular': 'Facility',
+        'list_endpoint': 'facilities',
+        'summary': lambda o: o.name,
+        'fields': [
+            {'name': 'name', 'label': 'Name'},
+            {'name': 'description', 'label': 'Description', 'type': 'textarea'},
+            {'name': 'capacity', 'label': 'Capacity (persons)', 'type': 'int'},
+            {'name': 'floor_area', 'label': 'Floor area'},
+            {'name': 'location', 'label': 'Location'},
+            {'name': 'modes', 'label': 'Modes (e.g. rehearsal, seminar, presentation)', 'type': 'textarea'},
+            {'name': 'characteristics', 'label': 'Characteristics (acoustics, lighting, etc.)', 'type': 'textarea'},
+            {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('active', 'active'), ('maintenance', 'maintenance'), ('closed', 'closed')]},
+        ],
+    },
+    'working_groups': {
+        'model': WorkingGroup,
+        'title': 'Working Groups',
+        'singular': 'Working group',
+        'list_endpoint': 'working_groups',
+        'summary': lambda o: o.name,
+        'fields': [
+            {'name': 'name', 'label': 'Name'},
+            {'name': 'focus', 'label': 'Focus area'},
+            {'name': 'description', 'label': 'Description', 'type': 'textarea'},
+            {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('active', 'active'), ('archived', 'archived')]},
+        ],
+    },
+    'constitution': {
+        'model': ConstitutionDocument,
+        'title': 'Constitution & Statutes',
+        'singular': 'Constitutional document',
+        'list_endpoint': 'constitution',
+        'summary': lambda o: o.title,
+        'fields': [
+            {'name': 'title', 'label': 'Title'},
+            {'name': 'category', 'label': 'Category', 'type': 'select', 'choices': [
+                ('philosophy', 'Philosophy'), ('constitution', 'Constitution'), ('statute', 'Statute'),
+                ('charter', 'Charter'), ('values', 'Core Values'), ('manifesto', 'Manifesto')]},
+            {'name': 'version', 'label': 'Version'},
+            {'name': 'effective_date', 'label': 'Effective date', 'type': 'date'},
+            {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('draft', 'Draft'), ('active', 'Active'), ('superseded', 'Superseded')]},
+            {'name': 'content', 'label': 'Content', 'type': 'textarea'},
         ],
     },
 }
@@ -364,10 +502,17 @@ def create_record(kind):
     return True
 
 
+# ─────────────────────────────────────────────
+# Route registration
+# ─────────────────────────────────────────────
+
 def register_routes(app):
+
     @app.context_processor
     def inject_user():
-        return {'current_user': current_user(), 'can_edit_record': can_edit_record}
+        return {'current_user': current_user(), 'can_edit_record': can_edit_record, 'is_manager': is_manager()}
+
+    # ── Dashboard ──
 
     @app.route('/')
     def index():
@@ -381,12 +526,19 @@ def register_routes(app):
             'equipment': Equipment.query.count(),
             'partners': Partnership.query.count(),
             'net_budget': round(income - expense, 2),
-            'phase_ii_actions': RoadmapItem.query.filter_by(phase='phase_ii').count(),
+            'open_tasks': Task.query.filter(Task.status.in_(['todo', 'in_progress'])).count(),
+            'working_groups': WorkingGroup.query.filter_by(status='active').count(),
+            'open_risks': RiskRegister.query.filter(RiskRegister.status != 'closed').count(),
         }
-        upcoming = Booking.query.order_by(Booking.start_dt.asc()).limit(8).all()
-        meetings = Meeting.query.order_by(Meeting.meeting_date.desc()).limit(5).all()
-        risks = RiskRegister.query.filter(RiskRegister.status != 'closed').limit(5).all()
-        return render_template('dashboard.html', stats=stats, upcoming=upcoming, meetings=meetings, risks=risks)
+        upcoming = Booking.query.filter(Booking.start_dt >= datetime.utcnow()).order_by(Booking.start_dt.asc()).limit(6).all()
+        meetings = Meeting.query.order_by(Meeting.meeting_date.desc()).limit(4).all()
+        risks = RiskRegister.query.filter(RiskRegister.status != 'closed').order_by(RiskRegister.severity.desc()).limit(4).all()
+        upcoming_events = DisseminationEvent.query.filter(DisseminationEvent.event_date >= date.today()).order_by(DisseminationEvent.event_date.asc()).limit(3).all()
+        my_tasks = Task.query.filter_by(assigned_to_id=current_user().id).filter(Task.status.in_(['todo', 'in_progress'])).order_by(Task.due_date.asc()).limit(5).all() if current_user() else []
+        return render_template('dashboard.html', stats=stats, upcoming=upcoming, meetings=meetings,
+                               risks=risks, upcoming_events=upcoming_events, my_tasks=my_tasks)
+
+    # ── Auth ──
 
     @app.route('/login', methods=['GET', 'POST'])
     def login():
@@ -407,6 +559,8 @@ def register_routes(app):
         flash('Logged out.', 'info')
         return redirect(url_for('login'))
 
+    # ── Users ──
+
     @app.route('/users', methods=['GET', 'POST'])
     def users():
         if not login_required():
@@ -418,6 +572,8 @@ def register_routes(app):
             create_record('users')
             return redirect(url_for('users'))
         return render_template('users.html', users=User.query.order_by(User.name).all())
+
+    # ── Projects ──
 
     @app.route('/projects', methods=['GET', 'POST'])
     def projects():
@@ -441,8 +597,53 @@ def register_routes(app):
         if phase:
             query = query.filter_by(phase=phase)
         return render_template('projects.html',
-            projects=query.order_by(ResearchProject.start_date.desc()).all(),
-            q=q, status=status, phase=phase)
+                               projects=query.order_by(ResearchProject.start_date.desc()).all(),
+                               q=q, status=status, phase=phase)
+
+    @app.route('/projects/<int:project_id>/add-member', methods=['POST'])
+    def add_project_member(project_id):
+        if not login_required():
+            return redirect(url_for('login'))
+        project = db.session.get(ResearchProject, project_id)
+        if not project:
+            abort(404)
+        user_id = int(request.form.get('user_id', 0))
+        role = request.form.get('role', 'contributor')
+        if user_id and not ProjectMembership.query.filter_by(project_id=project_id, user_id=user_id).first():
+            db.session.add(ProjectMembership(project_id=project_id, user_id=user_id, role=role))
+            db.session.commit()
+            flash('Member added.', 'success')
+        return redirect(url_for('record_detail', kind='projects', record_id=project_id))
+
+    @app.route('/projects/<int:project_id>/remove-member/<int:mid>', methods=['POST'])
+    def remove_project_member(project_id, mid):
+        if not login_required() or not is_manager():
+            abort(403)
+        m = db.session.get(ProjectMembership, mid)
+        if m and m.project_id == project_id:
+            db.session.delete(m)
+            db.session.commit()
+            flash('Member removed.', 'info')
+        return redirect(url_for('record_detail', kind='projects', record_id=project_id))
+
+    @app.route('/projects/<int:project_id>/add-milestone', methods=['POST'])
+    def add_milestone(project_id):
+        if not login_required():
+            return redirect(url_for('login'))
+        m = Milestone(
+            project_id=project_id,
+            title=request.form.get('title', ''),
+            target_date=parse_date(request.form.get('target_date')),
+            status=request.form.get('status', 'pending'),
+            description=request.form.get('description', ''),
+            created_by_id=current_user().id,
+        )
+        db.session.add(m)
+        db.session.commit()
+        flash('Milestone added.', 'success')
+        return redirect(url_for('record_detail', kind='projects', record_id=project_id))
+
+    # ── Bookings ──
 
     @app.route('/bookings', methods=['GET', 'POST'])
     def bookings():
@@ -464,9 +665,9 @@ def register_routes(app):
             query = query.filter_by(space=space)
         spaces = [r[0] for r in db.session.query(Booking.space).distinct().order_by(Booking.space).all()]
         return render_template('bookings.html',
-            bookings=query.order_by(Booking.start_dt.asc()).all(),
-            projects=ResearchProject.query.order_by(ResearchProject.title).all(),
-            spaces=spaces, q=q, space=space)
+                               bookings=query.order_by(Booking.start_dt.asc()).all(),
+                               projects=ResearchProject.query.order_by(ResearchProject.title).all(),
+                               spaces=spaces, q=q, space=space)
 
     @app.route('/bookings/calendar')
     def booking_calendar():
@@ -478,10 +679,7 @@ def register_routes(app):
         month = max(1, min(12, month))
         start = datetime(year, month, 1)
         end = datetime(year + (month // 12), (month % 12) + 1, 1)
-        month_bookings = Booking.query.filter(
-            Booking.start_dt >= start,
-            Booking.start_dt < end
-        ).all()
+        month_bookings = Booking.query.filter(Booking.start_dt >= start, Booking.start_dt < end).all()
         day_bookings = {}
         for b in month_bookings:
             d = b.start_dt.day
@@ -493,11 +691,12 @@ def register_routes(app):
         next_month = month + 1 if month < 12 else 1
         next_year = year if month < 12 else year + 1
         return render_template('booking_calendar.html',
-            weeks=weeks, day_bookings=day_bookings,
-            year=year, month=month, month_name=month_name,
-            prev_year=prev_year, prev_month=prev_month,
-            next_year=next_year, next_month=next_month,
-            today=today, total_bookings=len(month_bookings))
+                               weeks=weeks, day_bookings=day_bookings, year=year, month=month,
+                               month_name=month_name, prev_year=prev_year, prev_month=prev_month,
+                               next_year=next_year, next_month=next_month, today=today,
+                               total_bookings=len(month_bookings))
+
+    # ── Equipment ──
 
     @app.route('/equipment', methods=['GET', 'POST'])
     def equipment():
@@ -511,18 +710,30 @@ def register_routes(app):
         category = request.args.get('category', '')
         query = Equipment.query
         if q:
-            query = query.filter(
-                Equipment.name.ilike(f'%{q}%') |
-                Equipment.owner.ilike(f'%{q}%')
-            )
+            query = query.filter(Equipment.name.ilike(f'%{q}%') | Equipment.owner.ilike(f'%{q}%'))
         if status:
             query = query.filter_by(status=status)
         if category:
             query = query.filter_by(category=category)
         categories = [r[0] for r in db.session.query(Equipment.category).distinct().order_by(Equipment.category).all()]
         return render_template('equipment.html',
-            equipment=query.order_by(Equipment.category, Equipment.name).all(),
-            categories=categories, q=q, status=status, category=category)
+                               equipment=query.order_by(Equipment.category, Equipment.name).all(),
+                               categories=categories, q=q, status=status, category=category,
+                               facilities=Facility.query.order_by(Facility.name).all())
+
+    # ── Facilities ──
+
+    @app.route('/facilities', methods=['GET', 'POST'])
+    def facilities():
+        if not login_required():
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            create_record('facilities')
+            return redirect(url_for('facilities'))
+        return render_template('facilities.html',
+                               facilities=Facility.query.order_by(Facility.name).all())
+
+    # ── Budget ──
 
     @app.route('/budget', methods=['GET', 'POST'])
     def budget():
@@ -534,7 +745,6 @@ def register_routes(app):
         items = BudgetItem.query.order_by(BudgetItem.item_date.desc()).all()
         income = sum(i.amount for i in items if i.direction == 'income')
         expense = sum(i.amount for i in items if i.direction == 'expense')
-        # Per-project breakdown
         project_map = {p.id: p.title for p in ResearchProject.query.all()}
         proj_budgets = {}
         for item in items:
@@ -548,8 +758,9 @@ def register_routes(app):
         ]
         projects = ResearchProject.query.order_by(ResearchProject.title).all()
         return render_template('budget.html', items=items, income=income, expense=expense,
-                               net=income - expense, project_breakdown=project_breakdown,
-                               projects=projects)
+                               net=income - expense, project_breakdown=project_breakdown, projects=projects)
+
+    # ── Governance ──
 
     @app.route('/governance', methods=['GET', 'POST'])
     def governance():
@@ -558,7 +769,16 @@ def register_routes(app):
         if request.method == 'POST':
             create_record('governance')
             return redirect(url_for('governance'))
-        return render_template('governance.html', meetings=Meeting.query.order_by(Meeting.meeting_date.desc()).all())
+        wg_filter = request.args.get('wg', '')
+        query = Meeting.query
+        if wg_filter:
+            query = query.filter_by(working_group_id=int(wg_filter))
+        wgs = WorkingGroup.query.order_by(WorkingGroup.name).all()
+        return render_template('governance.html',
+                               meetings=query.order_by(Meeting.meeting_date.desc()).all(),
+                               working_groups=wgs, wg_filter=wg_filter)
+
+    # ── Partnerships ──
 
     @app.route('/partnerships', methods=['GET', 'POST'])
     def partnerships():
@@ -568,7 +788,11 @@ def register_routes(app):
             form_name = request.form['form_name']
             create_record('institutions' if form_name == 'institution' else 'partnerships')
             return redirect(url_for('partnerships'))
-        return render_template('partnerships.html', institutions=Institution.query.order_by(Institution.name).all(), partnerships=Partnership.query.order_by(Partnership.id.desc()).all())
+        return render_template('partnerships.html',
+                               institutions=Institution.query.order_by(Institution.name).all(),
+                               partnerships=Partnership.query.order_by(Partnership.id.desc()).all())
+
+    # ── Protocol & Policies ──
 
     @app.route('/protocol', methods=['GET', 'POST'])
     def protocol():
@@ -577,7 +801,9 @@ def register_routes(app):
         if request.method == 'POST':
             create_record('protocol')
             return redirect(url_for('protocol'))
-        return render_template('protocol.html', rules=ProtocolRule.query.order_by(ProtocolRule.id).all(), policies=PolicyDocument.query.order_by(PolicyDocument.category, PolicyDocument.title).all())
+        return render_template('protocol.html',
+                               rules=ProtocolRule.query.order_by(ProtocolRule.id).all(),
+                               policies=PolicyDocument.query.order_by(PolicyDocument.category, PolicyDocument.title).all())
 
     @app.route('/policies', methods=['GET', 'POST'])
     def policies():
@@ -586,7 +812,10 @@ def register_routes(app):
         if request.method == 'POST':
             create_record('policies')
             return redirect(url_for('policies'))
-        return render_template('policies.html', policies=PolicyDocument.query.order_by(PolicyDocument.category, PolicyDocument.title).all())
+        return render_template('policies.html',
+                               policies=PolicyDocument.query.order_by(PolicyDocument.category, PolicyDocument.title).all())
+
+    # ── Risks ──
 
     @app.route('/risks', methods=['GET', 'POST'])
     def risks():
@@ -600,17 +829,16 @@ def register_routes(app):
         severity = request.args.get('severity', '')
         query = RiskRegister.query
         if q:
-            query = query.filter(
-                RiskRegister.title.ilike(f'%{q}%') |
-                RiskRegister.owner.ilike(f'%{q}%')
-            )
+            query = query.filter(RiskRegister.title.ilike(f'%{q}%') | RiskRegister.owner.ilike(f'%{q}%'))
         if status:
             query = query.filter_by(status=status)
         if severity:
             query = query.filter_by(severity=severity)
         return render_template('risks.html',
-            risks=query.order_by(RiskRegister.severity.desc(), RiskRegister.id.desc()).all(),
-            q=q, status=status, severity=severity)
+                               risks=query.order_by(RiskRegister.severity.desc(), RiskRegister.id.desc()).all(),
+                               q=q, status=status, severity=severity)
+
+    # ── Roadmap ──
 
     @app.route('/roadmap', methods=['GET', 'POST'])
     def roadmap():
@@ -622,6 +850,20 @@ def register_routes(app):
         items = RoadmapItem.query.order_by(RoadmapItem.year.asc(), RoadmapItem.phase.asc()).all()
         return render_template('roadmap.html', items=items)
 
+    @app.route('/roadmap/timeline')
+    def roadmap_timeline():
+        if not login_required():
+            return redirect(url_for('login'))
+        items = RoadmapItem.query.order_by(RoadmapItem.year.asc(), RoadmapItem.phase.asc()).all()
+        years = sorted(set(i.year for i in items)) if items else [date.today().year]
+        # Group by year
+        by_year = {}
+        for item in items:
+            by_year.setdefault(item.year, []).append(item)
+        return render_template('roadmap_timeline.html', items=items, years=years, by_year=by_year)
+
+    # ── Events ──
+
     @app.route('/events', methods=['GET', 'POST'])
     def events():
         if not login_required():
@@ -629,7 +871,38 @@ def register_routes(app):
         if request.method == 'POST':
             create_record('events')
             return redirect(url_for('events'))
-        return render_template('events.html', events=DisseminationEvent.query.order_by(DisseminationEvent.event_date.desc()).all())
+        return render_template('events.html',
+                               events=DisseminationEvent.query.order_by(DisseminationEvent.event_date.desc()).all(),
+                               projects=ResearchProject.query.order_by(ResearchProject.title).all())
+
+    @app.route('/events/calendar')
+    def events_calendar():
+        if not login_required():
+            return redirect(url_for('login'))
+        today = date.today()
+        year = int(request.args.get('year', today.year))
+        month = int(request.args.get('month', today.month))
+        month = max(1, min(12, month))
+        month_events = DisseminationEvent.query.filter(
+            func.strftime('%Y', DisseminationEvent.event_date) == str(year),
+            func.strftime('%m', DisseminationEvent.event_date) == f'{month:02d}'
+        ).all()
+        day_events = {}
+        for e in month_events:
+            day_events.setdefault(e.event_date.day, []).append(e)
+        weeks = cal_module.monthcalendar(year, month)
+        month_name = cal_module.month_name[month]
+        prev_month = month - 1 if month > 1 else 12
+        prev_year = year if month > 1 else year - 1
+        next_month = month + 1 if month < 12 else 1
+        next_year = year if month < 12 else year + 1
+        return render_template('events_calendar.html',
+                               weeks=weeks, day_events=day_events, year=year, month=month,
+                               month_name=month_name, prev_year=prev_year, prev_month=prev_month,
+                               next_year=next_year, next_month=next_month, today=today,
+                               total_events=len(month_events))
+
+    # ── Reports ──
 
     @app.route('/reports', methods=['GET', 'POST'])
     def reports():
@@ -643,14 +916,267 @@ def register_routes(app):
         month_start = datetime.strptime(current_month + '-01', '%Y-%m-%d')
         month_bkgs = Booking.query.filter(Booking.start_dt >= month_start).count()
         month_evts = DisseminationEvent.query.filter(func.strftime('%Y-%m', DisseminationEvent.event_date) == current_month).count()
-        return render_template('reports.html', reports=reports_list, month_bookings=month_bkgs, month_events=month_evts)
+        return render_template('reports.html', reports=reports_list,
+                               month_bookings=month_bkgs, month_events=month_evts)
+
+    # ── Working Groups ──
+
+    @app.route('/working-groups', methods=['GET', 'POST'])
+    def working_groups():
+        if not login_required():
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            create_record('working_groups')
+            return redirect(url_for('working_groups'))
+        return render_template('working_groups.html',
+                               wgs=WorkingGroup.query.order_by(WorkingGroup.status, WorkingGroup.name).all(),
+                               users=User.query.order_by(User.name).all())
+
+    @app.route('/working-groups/<int:wg_id>/add-member', methods=['POST'])
+    def add_wg_member(wg_id):
+        if not login_required():
+            return redirect(url_for('login'))
+        wg = db.session.get(WorkingGroup, wg_id)
+        if not wg:
+            abort(404)
+        user_id = int(request.form.get('user_id', 0))
+        role = request.form.get('role', 'member')
+        if user_id and not WorkingGroupMembership.query.filter_by(wg_id=wg_id, user_id=user_id).first():
+            db.session.add(WorkingGroupMembership(wg_id=wg_id, user_id=user_id, role=role))
+            db.session.commit()
+            flash('Member added to working group.', 'success')
+        return redirect(url_for('record_detail', kind='working_groups', record_id=wg_id))
+
+    @app.route('/working-groups/<int:wg_id>/remove-member/<int:mid>', methods=['POST'])
+    def remove_wg_member(wg_id, mid):
+        if not login_required() or not is_manager():
+            abort(403)
+        m = db.session.get(WorkingGroupMembership, mid)
+        if m and m.wg_id == wg_id:
+            db.session.delete(m)
+            db.session.commit()
+            flash('Member removed.', 'info')
+        return redirect(url_for('record_detail', kind='working_groups', record_id=wg_id))
+
+    # ── Tasks ──
+
+    @app.route('/tasks', methods=['GET', 'POST'])
+    def tasks():
+        if not login_required():
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            t = Task(
+                title=request.form.get('title', ''),
+                description=request.form.get('description', ''),
+                status=request.form.get('status', 'todo'),
+                priority=request.form.get('priority', 'normal'),
+                due_date=parse_date(request.form.get('due_date')),
+                assigned_to_id=int(request.form['assigned_to_id']) if request.form.get('assigned_to_id') else None,
+                entity_type=request.form.get('entity_type') or None,
+                entity_id=int(request.form['entity_id']) if request.form.get('entity_id') else None,
+                created_by_id=current_user().id,
+            )
+            db.session.add(t)
+            db.session.flush()
+            _add_audit_log('tasks', t.id, 'create')
+            db.session.commit()
+            flash('Task created.', 'success')
+            return redirect(url_for('tasks'))
+        q = request.args.get('q', '').strip()
+        status_f = request.args.get('status', '')
+        assignee_f = request.args.get('assignee', '')
+        priority_f = request.args.get('priority', '')
+        query = Task.query
+        if q:
+            query = query.filter(Task.title.ilike(f'%{q}%'))
+        if status_f:
+            query = query.filter_by(status=status_f)
+        if assignee_f:
+            query = query.filter_by(assigned_to_id=int(assignee_f))
+        if priority_f:
+            query = query.filter_by(priority=priority_f)
+        return render_template('tasks.html',
+                               tasks=query.order_by(Task.due_date.asc(), Task.priority.desc()).all(),
+                               users=User.query.order_by(User.name).all(),
+                               projects=ResearchProject.query.order_by(ResearchProject.title).all(),
+                               q=q, status_f=status_f, assignee_f=assignee_f, priority_f=priority_f)
+
+    @app.route('/tasks/<int:task_id>/status', methods=['POST'])
+    def update_task_status(task_id):
+        if not login_required():
+            return redirect(url_for('login'))
+        t = db.session.get(Task, task_id)
+        if t:
+            t.status = request.form.get('status', t.status)
+            db.session.commit()
+        return redirect(request.referrer or url_for('tasks'))
+
+    # ── Constitution ──
+
+    @app.route('/constitution', methods=['GET', 'POST'])
+    def constitution():
+        if not login_required():
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            create_record('constitution')
+            return redirect(url_for('constitution'))
+        docs = ConstitutionDocument.query.order_by(ConstitutionDocument.category, ConstitutionDocument.title).all()
+        protocol_rules = ProtocolRule.query.all()
+        policies = PolicyDocument.query.all()
+        risks = RiskRegister.query.filter(RiskRegister.status != 'closed').all()
+        return render_template('constitution.html', docs=docs,
+                               protocol_rules=protocol_rules, policies=policies, risks=risks)
+
+    # ── Polls ──
+
+    @app.route('/polls', methods=['GET', 'POST'])
+    def polls():
+        if not login_required():
+            return redirect(url_for('login'))
+        return render_template('polls.html',
+                               polls=Poll.query.order_by(Poll.id.desc()).all())
+
+    @app.route('/polls/new', methods=['GET', 'POST'])
+    def polls_new():
+        if not login_required():
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            is_pub = 'is_public' in request.form
+            pub_token = uuid.uuid4().hex if is_pub else None
+            poll = Poll(
+                title=request.form.get('title', ''),
+                description=request.form.get('description', ''),
+                poll_type=request.form.get('poll_type', 'single'),
+                status='open',
+                deadline=parse_dt(request.form.get('deadline')) if request.form.get('deadline') else None,
+                is_public=is_pub,
+                public_token=pub_token,
+                created_by_id=current_user().id,
+            )
+            db.session.add(poll)
+            db.session.flush()
+            # Options
+            for i, opt_text in enumerate(request.form.getlist('option_text')):
+                if opt_text.strip():
+                    db.session.add(PollOption(poll_id=poll.id, option_text=opt_text.strip(), order=i))
+            _add_audit_log('polls', poll.id, 'create')
+            db.session.commit()
+            flash('Poll created.', 'success')
+            return redirect(url_for('poll_detail', poll_id=poll.id))
+        return render_template('poll_new.html')
+
+    @app.route('/polls/<int:poll_id>', methods=['GET', 'POST'])
+    def poll_detail(poll_id):
+        if not login_required():
+            return redirect(url_for('login'))
+        poll = db.session.get(Poll, poll_id)
+        if not poll:
+            abort(404)
+        user = current_user()
+        user_voted = PollVote.query.filter_by(poll_id=poll_id, user_id=user.id).first() is not None if user else False
+        if request.method == 'POST' and poll.status == 'open' and not user_voted:
+            option_ids = request.form.getlist('option_id')
+            if poll.poll_type == 'single' and option_ids:
+                option_ids = [option_ids[0]]
+            for oid in option_ids:
+                db.session.add(PollVote(poll_id=poll_id, option_id=int(oid), user_id=user.id))
+            db.session.commit()
+            flash('Vote recorded.', 'success')
+            return redirect(url_for('poll_detail', poll_id=poll_id))
+        options = poll.options.all()
+        vote_counts = {}
+        total_votes = 0
+        for opt in options:
+            count = PollVote.query.filter_by(poll_id=poll_id, option_id=opt.id).count()
+            vote_counts[opt.id] = count
+            total_votes += count
+        tokens = PollToken.query.filter_by(poll_id=poll_id).order_by(PollToken.created_at.desc()).all()
+        return render_template('poll_detail.html', poll=poll, options=options,
+                               vote_counts=vote_counts, total_votes=total_votes,
+                               user_voted=user_voted, tokens=tokens)
+
+    @app.route('/polls/<int:poll_id>/toggle-status', methods=['POST'])
+    def toggle_poll_status(poll_id):
+        if not login_required() or not is_manager():
+            abort(403)
+        poll = db.session.get(Poll, poll_id)
+        if poll:
+            poll.status = 'closed' if poll.status == 'open' else 'open'
+            db.session.commit()
+            flash(f"Poll {'closed' if poll.status == 'closed' else 're-opened'}.", 'info')
+        return redirect(url_for('poll_detail', poll_id=poll_id))
+
+    @app.route('/polls/<int:poll_id>/tokens', methods=['POST'])
+    def generate_poll_token(poll_id):
+        if not login_required() or not is_manager():
+            abort(403)
+        poll = db.session.get(Poll, poll_id)
+        if not poll:
+            abort(404)
+        label = request.form.get('label', '').strip()
+        count = int(request.form.get('count', 1))
+        for _ in range(min(count, 50)):
+            db.session.add(PollToken(
+                poll_id=poll_id,
+                token=uuid.uuid4().hex,
+                label=label
+            ))
+        db.session.commit()
+        flash(f'{count} invite token(s) generated.', 'success')
+        return redirect(url_for('poll_detail', poll_id=poll_id))
+
+    @app.route('/vote/<token>', methods=['GET', 'POST'])
+    def public_vote(token):
+        # Try public token first
+        poll = Poll.query.filter_by(public_token=token).first()
+        poll_token = None
+        if not poll:
+            poll_token = PollToken.query.filter_by(token=token).first()
+            if poll_token:
+                poll = db.session.get(Poll, poll_token.poll_id)
+        if not poll:
+            abort(404)
+        if poll.status != 'open':
+            return render_template('vote_public.html', poll=poll, closed=True, options=[], vote_counts={}, total_votes=0)
+        if poll_token and poll_token.used:
+            return render_template('vote_public.html', poll=poll, already_voted=True, options=[], vote_counts={}, total_votes=0)
+        # Check session for public token voting
+        session_key = f'voted_poll_{poll.id}'
+        already_voted = session.get(session_key, False)
+        if request.method == 'POST' and not already_voted:
+            option_ids = request.form.getlist('option_id')
+            if poll.poll_type == 'single' and option_ids:
+                option_ids = [option_ids[0]]
+            anon = uuid.uuid4().hex
+            for oid in option_ids:
+                db.session.add(PollVote(poll_id=poll.id, option_id=int(oid), anon_token=anon))
+            if poll_token:
+                poll_token.used = True
+                poll_token.used_at = datetime.utcnow()
+            db.session.commit()
+            session[session_key] = True
+            flash('Your vote has been recorded. Thank you.', 'success')
+            return redirect(url_for('public_vote', token=token))
+        options = poll.options.all()
+        vote_counts = {}
+        total_votes = 0
+        for opt in options:
+            count = PollVote.query.filter_by(poll_id=poll.id, option_id=opt.id).count()
+            vote_counts[opt.id] = count
+            total_votes += count
+        return render_template('vote_public.html', poll=poll, options=options,
+                               vote_counts=vote_counts, total_votes=total_votes,
+                               already_voted=already_voted,
+                               poll_token=poll_token, closed=False)
+
+    # ── Audit ──
 
     @app.route('/audit')
     def audit():
         if not login_required():
             return redirect(url_for('login'))
         if not is_manager():
-            flash('Access denied. Audit log is visible to managers only.', 'danger')
+            flash('Access denied.', 'danger')
             return redirect(url_for('index'))
         q = request.args.get('q', '').strip()
         entity_type = request.args.get('entity_type', '')
@@ -662,6 +1188,8 @@ def register_routes(app):
         entries = query.order_by(AuditLog.timestamp.desc()).limit(200).all()
         entity_types = [r[0] for r in db.session.query(AuditLog.entity_type).distinct().order_by(AuditLog.entity_type).all()]
         return render_template('audit.html', entries=entries, q=q, entity_type=entity_type, entity_types=entity_types)
+
+    # ── Sub-entity create routes ──
 
     @app.route('/sessions', methods=['POST'])
     def sessions():
@@ -715,6 +1243,8 @@ def register_routes(app):
         flash('Proposal recorded.', 'success')
         return redirect(url_for('record_detail', kind='governance', record_id=meeting_id))
 
+    # ── File Attachments ──
+
     @app.route('/records/<kind>/<int:record_id>/upload', methods=['POST'])
     def upload_attachment(kind, record_id):
         if not login_required():
@@ -752,6 +1282,8 @@ def register_routes(app):
         upload_dir = os.path.join(app.instance_path, 'uploads')
         return send_from_directory(upload_dir, filename)
 
+    # ── Generic record detail ──
+
     @app.route('/records/<kind>/<int:record_id>', methods=['GET', 'POST'])
     def record_detail(kind, record_id):
         if not login_required():
@@ -772,15 +1304,13 @@ def register_routes(app):
             new_vals = _capture_values(obj, config)
             if kind == 'bookings':
                 conflict = Booking.query.filter(
-                    Booking.space == obj.space,
-                    Booking.id != obj.id,
-                    Booking.start_dt < obj.end_dt,
-                    Booking.end_dt > obj.start_dt
+                    Booking.space == obj.space, Booking.id != obj.id,
+                    Booking.start_dt < obj.end_dt, Booking.end_dt > obj.start_dt
                 ).first()
                 if conflict:
                     obj.project_id = original_project_id
                     db.session.rollback()
-                    flash(f'Conflict detected with booking #{conflict.id} in {obj.space}.', 'danger')
+                    flash(f'Conflict with booking #{conflict.id} in {obj.space}.', 'danger')
                     return redirect(url_for('record_detail', kind=kind, record_id=record_id))
             _log_field_changes(kind, obj.id, old_vals, new_vals)
             db.session.commit()
@@ -798,6 +1328,12 @@ def register_routes(app):
                 display = obj.institution.name
             elif field['name'] == 'meeting_id' and getattr(obj, 'meeting', None):
                 display = f"{obj.meeting.meeting_date} · {obj.meeting.title}"
+            elif field['name'] == 'facility_id' and getattr(obj, 'facility', None):
+                display = obj.facility.name
+            elif field['name'] == 'assigned_to_id' and getattr(obj, 'assignee', None):
+                display = obj.assignee.name
+            elif field['name'] == 'working_group_id' and getattr(obj, 'working_group', None):
+                display = obj.working_group.name
             elif field.get('type') == 'checkbox':
                 display = 'Yes' if val else 'No'
             else:
@@ -811,15 +1347,36 @@ def register_routes(app):
 
         creator = db.session.get(User, getattr(obj, 'created_by_id', None)) if hasattr(obj, 'created_by_id') else None
         rs_sessions = ResearchSession.query.filter_by(project_id=obj.id).order_by(ResearchSession.session_date.desc()).all() if kind == 'projects' else []
+        project_members = ProjectMembership.query.filter_by(project_id=obj.id).all() if kind == 'projects' else []
+        project_milestones = Milestone.query.filter_by(project_id=obj.id).order_by(Milestone.target_date).all() if kind == 'projects' else []
+        project_tasks = Task.query.filter_by(entity_type='projects', entity_id=obj.id).order_by(Task.due_date).all() if kind == 'projects' else []
+        project_budget_items = BudgetItem.query.filter_by(project_id=obj.id).order_by(BudgetItem.item_date.desc()).all() if kind == 'projects' else []
         meeting_proposals = ProposalRecord.query.filter_by(meeting_id=obj.id).order_by(ProposalRecord.id).all() if kind == 'governance' else []
+        facility_equipment = Equipment.query.filter_by(facility_id=obj.id).all() if kind == 'facilities' else []
+        wg_memberships = WorkingGroupMembership.query.filter_by(wg_id=obj.id).all() if kind == 'working_groups' else []
         attachments = Attachment.query.filter_by(entity_type=kind, entity_id=obj.id).order_by(Attachment.uploaded_at.desc()).all()
         audit_entries = AuditLog.query.filter_by(entity_type=kind, entity_id=obj.id).order_by(AuditLog.timestamp.desc()).limit(30).all()
+        all_users = User.query.order_by(User.name).all()
+
+        # Budget summary for projects
+        project_budget_summary = None
+        if kind == 'projects':
+            proj_income = sum(i.amount for i in project_budget_items if i.direction == 'income')
+            proj_expense = sum(i.amount for i in project_budget_items if i.direction == 'expense')
+            project_budget_summary = {'income': proj_income, 'expense': proj_expense, 'net': proj_income - proj_expense, 'allocation': obj.budget_allocation or 0}
 
         return render_template('record_detail.html',
-            kind=kind, config=config, obj=obj, display_fields=display_fields, creator=creator,
-            can_edit=can_edit_record(obj), is_manager=is_manager(),
-            rs_sessions=rs_sessions, meeting_proposals=meeting_proposals,
-            attachments=attachments, audit_entries=audit_entries)
+                               kind=kind, config=config, obj=obj, display_fields=display_fields, creator=creator,
+                               can_edit=can_edit_record(obj), is_manager=is_manager(),
+                               rs_sessions=rs_sessions, meeting_proposals=meeting_proposals,
+                               project_members=project_members, project_milestones=project_milestones,
+                               project_tasks=project_tasks, project_budget_items=project_budget_items,
+                               project_budget_summary=project_budget_summary,
+                               facility_equipment=facility_equipment, wg_memberships=wg_memberships,
+                               attachments=attachments, audit_entries=audit_entries,
+                               all_users=all_users)
+
+    # ── About ──
 
     @app.route('/about')
     def about():

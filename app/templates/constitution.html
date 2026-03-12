@@ -1,0 +1,130 @@
+{% extends 'base.html' %}{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>Constitution &amp; Statutes</h1>
+    <div class="small-muted">Foundational documents · linked to protocol, policies, and governance</div>
+  </div>
+  <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newDocForm">+ New document</button>
+</div>
+
+<div class="collapse mb-3" id="newDocForm">
+<div class="card"><div class="card-body">
+<form method="post" class="row g-2">
+  <div class="col-md-5"><input class="form-control form-control-sm" name="title" placeholder="Document title" required></div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="category">
+      <option value="philosophy">Philosophy</option>
+      <option value="constitution">Constitution</option>
+      <option value="statute">Statute</option>
+      <option value="charter">Charter</option>
+      <option value="values">Core Values</option>
+      <option value="manifesto">Manifesto</option>
+    </select>
+  </div>
+  <div class="col-md-1"><input class="form-control form-control-sm" name="version" placeholder="v1.0" value="1.0"></div>
+  <div class="col-md-2"><input type="date" class="form-control form-control-sm" name="effective_date"></div>
+  <div class="col-md-1">
+    <select class="form-select form-select-sm" name="status"><option value="draft">Draft</option><option value="active" selected>Active</option><option value="superseded">Superseded</option></select>
+  </div>
+  <div class="col-md-1"><button class="btn btn-sm btn-dark w-100">Save</button></div>
+  <div class="col-12"><textarea class="form-control form-control-sm" name="content" placeholder="Document content" required style="min-height:120px"></textarea></div>
+</form>
+</div></div>
+</div>
+
+<div class="row g-3">
+
+  <!-- Documents -->
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header">Foundational documents</div>
+      <div class="card-body p-0">
+        {% if docs %}
+        {% for doc in docs %}
+        <div class="p-3 border-bottom">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <a href="{{ url_for('record_detail', kind='constitution', record_id=doc.id) }}" class="primary-link fw-semibold">{{ doc.title }}</a>
+              <div class="small-muted">
+                <span class="agenda-pill">{{ doc.category }}</span>
+                v{{ doc.version }}
+                {% if doc.effective_date %}· effective {{ doc.effective_date }}{% endif %}
+              </div>
+            </div>
+            <span class="status-badge status-{{ doc.status }}">{{ doc.status }}</span>
+          </div>
+          {% if doc.content %}<div class="small mt-2" style="white-space:pre-wrap">{{ doc.content[:300] }}{% if doc.content|length > 300 %}…<a href="{{ url_for('record_detail', kind='constitution', record_id=doc.id) }}" class="ms-1">read more</a>{% endif %}</div>{% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="p-3 small-muted">No constitutional documents yet. Start by documenting the organization's philosophy above.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Linked references -->
+  <div class="col-md-5">
+    <!-- Protocol rules -->
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        Protocol rules
+        <a href="{{ url_for('protocol') }}" class="small-muted">manage →</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for r in protocol_rules %}
+          <li class="list-group-item py-2 px-3">
+            <a href="{{ url_for('record_detail', kind='protocol', record_id=r.id) }}" class="primary-link d-block">{{ r.principle }}</a>
+            <div class="small-muted">{{ r.description[:80] }}{% if r.description|length > 80 %}…{% endif %}</div>
+          </li>
+          {% else %}
+          <li class="list-group-item py-2 px-3 small-muted">No protocol rules.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- Open risks linked to constitution -->
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        Open risks
+        <a href="{{ url_for('risks') }}" class="small-muted">manage →</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for r in risks %}
+          <li class="list-group-item py-2 px-3">
+            <span class="status-badge severity-{{ r.severity }}">{{ r.severity }}</span>
+            <a href="{{ url_for('record_detail', kind='risks', record_id=r.id) }}" class="primary-link ms-1">{{ r.title }}</a>
+          </li>
+          {% else %}
+          <li class="list-group-item py-2 px-3 small-muted">No open risks.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- Active policies count -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        Policies
+        <a href="{{ url_for('policies') }}" class="small-muted">manage →</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for p in policies %}
+          <li class="list-group-item py-2 px-3">
+            <a href="{{ url_for('record_detail', kind='policies', record_id=p.id) }}" class="primary-link d-block">{{ p.title }}</a>
+            <div class="small-muted">{{ p.category }} · v{{ p.version }}</div>
+          </li>
+          {% else %}
+          <li class="list-group-item py-2 px-3 small-muted">No policies.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

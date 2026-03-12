@@ -43,6 +43,8 @@ class Partnership(OwnershipMixin, db.Model):
     objective = db.Column(db.Text, nullable=False)
     requested_support = db.Column(db.Text, default='')
     timeline = db.Column(db.String(120), default='')
+    intellectual_contributions = db.Column(db.Text, default='')
+    renewal_intention = db.Column(db.String(50), default='')
     institution = db.relationship('Institution')
 
 
@@ -57,6 +59,9 @@ class ResearchProject(OwnershipMixin, db.Model):
     outputs = db.Column(db.Text, default='')
     start_date = db.Column(db.Date, default=date.today)
     end_date = db.Column(db.Date, nullable=True)
+    budget_allocation = db.Column(db.Float, default=0.0)
+    memberships = db.relationship('ProjectMembership', backref='project', lazy='dynamic')
+    milestones = db.relationship('Milestone', backref='project', lazy='dynamic', order_by='Milestone.target_date')
 
 
 class Booking(OwnershipMixin, db.Model):
@@ -71,6 +76,19 @@ class Booking(OwnershipMixin, db.Model):
     project = db.relationship('ResearchProject')
 
 
+class Facility(OwnershipMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, default='')
+    capacity = db.Column(db.Integer, default=0)
+    floor_area = db.Column(db.String(30), default='')
+    location = db.Column(db.String(200), default='')
+    modes = db.Column(db.Text, default='')
+    characteristics = db.Column(db.Text, default='')
+    status = db.Column(db.String(30), default='active')
+    equipment_items = db.relationship('Equipment', backref='facility', lazy='dynamic')
+
+
 class Equipment(OwnershipMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
@@ -79,6 +97,7 @@ class Equipment(OwnershipMixin, db.Model):
     status = db.Column(db.String(50), default='available')
     owner = db.Column(db.String(120), default='Ideas Block / LMTA partnership')
     transfer_plan = db.Column(db.Text, default='')
+    facility_id = db.Column(db.Integer, db.ForeignKey('facility.id'), nullable=True)
 
 
 class BudgetItem(OwnershipMixin, db.Model):
@@ -99,6 +118,8 @@ class Meeting(OwnershipMixin, db.Model):
     body = db.Column(db.Text, nullable=False)
     decisions = db.Column(db.Text, default='')
     meeting_type = db.Column(db.String(80), default='steering')
+    working_group_id = db.Column(db.Integer, db.ForeignKey('working_group.id'), nullable=True)
+    working_group = db.relationship('WorkingGroup')
 
 
 class PolicyDocument(OwnershipMixin, db.Model):
@@ -126,6 +147,8 @@ class RoadmapItem(OwnershipMixin, db.Model):
     owner = db.Column(db.String(120), nullable=False)
     status = db.Column(db.String(50), nullable=False, default='planned')
     details = db.Column(db.Text, default='')
+    start_date = db.Column(db.Date, nullable=True)
+    end_date = db.Column(db.Date, nullable=True)
 
 
 class ProtocolRule(OwnershipMixin, db.Model):
@@ -142,7 +165,10 @@ class DisseminationEvent(OwnershipMixin, db.Model):
     format = db.Column(db.String(100), nullable=False)
     audience = db.Column(db.String(120), default='public')
     linked_project = db.Column(db.String(150), default='')
+    project_id = db.Column(db.Integer, db.ForeignKey('research_project.id'), nullable=True)
     notes = db.Column(db.Text, default='')
+    location = db.Column(db.String(200), default='')
+    project_ref = db.relationship('ResearchProject')
 
 
 class MonthlyReport(OwnershipMixin, db.Model):
@@ -201,3 +227,106 @@ class Attachment(db.Model):
     uploaded_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
     uploader = db.relationship('User')
+
+
+class WorkingGroup(OwnershipMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, default='')
+    focus = db.Column(db.String(200), default='')
+    status = db.Column(db.String(30), default='active')
+    memberships = db.relationship('WorkingGroupMembership', backref='group', lazy='dynamic')
+
+
+class WorkingGroupMembership(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    wg_id = db.Column(db.Integer, db.ForeignKey('working_group.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    role = db.Column(db.String(80), default='member')
+    user = db.relationship('User')
+
+
+class ProjectMembership(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('research_project.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    role = db.Column(db.String(80), default='contributor')
+    user = db.relationship('User')
+
+
+class Milestone(OwnershipMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('research_project.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    target_date = db.Column(db.Date, nullable=True)
+    status = db.Column(db.String(30), default='pending')
+    description = db.Column(db.Text, default='')
+
+
+class Task(OwnershipMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, default='')
+    status = db.Column(db.String(30), default='todo')
+    priority = db.Column(db.String(20), default='normal')
+    due_date = db.Column(db.Date, nullable=True)
+    assigned_to_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    entity_type = db.Column(db.String(50), nullable=True)
+    entity_id = db.Column(db.Integer, nullable=True)
+    milestone_id = db.Column(db.Integer, db.ForeignKey('milestone.id'), nullable=True)
+    assignee = db.relationship('User', foreign_keys=[assigned_to_id])
+    milestone = db.relationship('Milestone')
+
+
+class ConstitutionDocument(OwnershipMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    category = db.Column(db.String(80), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    version = db.Column(db.String(20), default='1.0')
+    effective_date = db.Column(db.Date, nullable=True)
+    status = db.Column(db.String(30), default='active')
+
+
+class Poll(OwnershipMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, default='')
+    poll_type = db.Column(db.String(20), default='single')
+    status = db.Column(db.String(30), default='open')
+    deadline = db.Column(db.DateTime, nullable=True)
+    is_public = db.Column(db.Boolean, default=False)
+    public_token = db.Column(db.String(64), nullable=True, unique=True)
+    entity_type = db.Column(db.String(50), nullable=True)
+    entity_id = db.Column(db.Integer, nullable=True)
+    options = db.relationship('PollOption', backref='poll', order_by='PollOption.order', lazy='dynamic')
+    votes = db.relationship('PollVote', backref='poll', lazy='dynamic')
+
+
+class PollOption(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=False)
+    option_text = db.Column(db.String(300), nullable=False)
+    order = db.Column(db.Integer, default=0)
+
+
+class PollVote(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=False)
+    option_id = db.Column(db.Integer, db.ForeignKey('poll_option.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    anon_token = db.Column(db.String(64), nullable=True)
+    voted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship('User')
+    option = db.relationship('PollOption')
+
+
+class PollToken(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=False)
+    token = db.Column(db.String(64), nullable=False, unique=True)
+    label = db.Column(db.String(200), default='')
+    used = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    used_at = db.Column(db.DateTime, nullable=True)
+    poll = db.relationship('Poll')

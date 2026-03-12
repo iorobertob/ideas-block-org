@@ -1,0 +1,60 @@
+{% extends 'base.html' %}{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <h1>Facilities</h1>
+  <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newFacForm">+ New facility</button>
+</div>
+
+<div class="collapse mb-3" id="newFacForm">
+<div class="card"><div class="card-body">
+<h5 class="mb-3">New facility / space</h5>
+<form method="post" class="row g-2">
+  <div class="col-md-4"><input class="form-control form-control-sm" name="name" placeholder="Name (e.g. Research Studio A)" required></div>
+  <div class="col-md-2"><input class="form-control form-control-sm" name="capacity" type="number" placeholder="Capacity"></div>
+  <div class="col-md-2"><input class="form-control form-control-sm" name="floor_area" placeholder="Area (e.g. 80m²)"></div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="status"><option value="active">active</option><option value="maintenance">maintenance</option><option value="closed">closed</option></select>
+  </div>
+  <div class="col-md-2"><button class="btn btn-sm btn-dark w-100">Save</button></div>
+  <div class="col-md-6"><input class="form-control form-control-sm" name="location" placeholder="Location / address"></div>
+  <div class="col-md-6"><input class="form-control form-control-sm" name="modes" placeholder="Modes (rehearsal, seminar, presentation, lab…)"></div>
+  <div class="col-md-6"><textarea class="form-control form-control-sm" name="description" placeholder="Description" style="min-height:55px"></textarea></div>
+  <div class="col-md-6"><textarea class="form-control form-control-sm" name="characteristics" placeholder="Characteristics (acoustics, lighting, blackout, HVAC…)" style="min-height:55px"></textarea></div>
+</form>
+</div></div>
+</div>
+
+<div class="row g-3">
+{% for f in facilities %}
+<div class="col-md-6 col-xl-4">
+  <div class="card h-100">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <h5 class="mb-0"><a href="{{ url_for('record_detail', kind='facilities', record_id=f.id) }}" class="primary-link">{{ f.name }}</a></h5>
+        <span class="status-badge status-{{ f.status }}">{{ f.status }}</span>
+      </div>
+      <div class="d-flex gap-3 small-muted mb-2">
+        {% if f.capacity %}<span>👥 {{ f.capacity }}</span>{% endif %}
+        {% if f.floor_area %}<span>📐 {{ f.floor_area }}</span>{% endif %}
+        {% if f.location %}<span>📍 {{ f.location }}</span>{% endif %}
+      </div>
+      {% if f.modes %}
+      <div class="mb-2">
+        {% for mode in f.modes.split(',') %}
+        <span class="agenda-pill">{{ mode.strip() }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if f.description %}<p class="small mb-2">{{ f.description[:120] }}{% if f.description|length > 120 %}…{% endif %}</p>{% endif %}
+      {% if f.characteristics %}<div class="small-muted" style="font-size:0.78rem">{{ f.characteristics[:100] }}{% if f.characteristics|length > 100 %}…{% endif %}</div>{% endif %}
+    </div>
+    <div class="card-footer bg-transparent py-2 d-flex justify-content-between">
+      <a href="{{ url_for('record_detail', kind='facilities', record_id=f.id) }}" class="btn btn-sm btn-outline-secondary">Open</a>
+      <span class="small-muted">{{ f.equipment_items.count() }} equipment item{{ 's' if f.equipment_items.count() != 1 }}</span>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="col-12"><div class="card"><div class="card-body small-muted">No facilities yet. Document your spaces above.</div></div></div>
+{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends 'base.html' %}{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <h1>Tasks</h1>
+  <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newTaskForm">+ New task</button>
+</div>
+
+<div class="collapse mb-3" id="newTaskForm">
+<div class="card"><div class="card-body">
+<h5 class="mb-3">New task</h5>
+<form method="post" class="row g-2">
+  <div class="col-md-5"><input class="form-control form-control-sm" name="title" placeholder="Task title" required></div>
+  <div class="col-md-3">
+    <select class="form-select form-select-sm" name="assigned_to_id">
+      <option value="">— unassigned —</option>
+      {% for u in users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2"><input type="date" class="form-control form-control-sm" name="due_date"></div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="priority">
+      <option value="low">Low</option>
+      <option value="normal" selected>Normal</option>
+      <option value="high">High</option>
+      <option value="urgent">Urgent</option>
+    </select>
+  </div>
+  <div class="col-md-4">
+    <select class="form-select form-select-sm" name="entity_type">
+      <option value="">— no project context —</option>
+      <option value="projects">Project</option>
+      <option value="governance">Meeting</option>
+      <option value="risks">Risk</option>
+    </select>
+  </div>
+  <div class="col-md-4">
+    <select class="form-select form-select-sm" name="entity_id">
+      <option value="">— select project —</option>
+      {% for p in projects %}<option value="{{ p.id }}">{{ p.title }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="status">
+      <option value="todo">To do</option>
+      <option value="in_progress">In progress</option>
+      <option value="done">Done</option>
+      <option value="blocked">Blocked</option>
+    </select>
+  </div>
+  <div class="col-md-2"><button class="btn btn-sm btn-dark w-100">Save</button></div>
+  <div class="col-12"><textarea class="form-control form-control-sm" name="description" placeholder="Description (optional)" style="min-height:55px"></textarea></div>
+</form>
+</div></div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-3"><div class="card-body py-2">
+<form method="get" class="d-flex gap-2 flex-wrap align-items-center">
+  <input class="form-control form-control-sm" style="max-width:200px" name="q" value="{{ q }}" placeholder="Search…">
+  <select class="form-select form-select-sm" style="max-width:140px" name="status">
+    <option value="">All statuses</option>
+    <option value="todo" {% if status_f=='todo' %}selected{% endif %}>To do</option>
+    <option value="in_progress" {% if status_f=='in_progress' %}selected{% endif %}>In progress</option>
+    <option value="done" {% if status_f=='done' %}selected{% endif %}>Done</option>
+    <option value="blocked" {% if status_f=='blocked' %}selected{% endif %}>Blocked</option>
+  </select>
+  <select class="form-select form-select-sm" style="max-width:140px" name="priority">
+    <option value="">All priorities</option>
+    <option value="urgent" {% if priority_f=='urgent' %}selected{% endif %}>Urgent</option>
+    <option value="high" {% if priority_f=='high' %}selected{% endif %}>High</option>
+    <option value="normal" {% if priority_f=='normal' %}selected{% endif %}>Normal</option>
+    <option value="low" {% if priority_f=='low' %}selected{% endif %}>Low</option>
+  </select>
+  <select class="form-select form-select-sm" style="max-width:180px" name="assignee">
+    <option value="">All assignees</option>
+    {% for u in users %}<option value="{{ u.id }}" {% if assignee_f==u.id|string %}selected{% endif %}>{{ u.name }}</option>{% endfor %}
+  </select>
+  <button class="btn btn-sm btn-outline-secondary">Filter</button>
+  {% if q or status_f or assignee_f or priority_f %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('tasks') }}">Clear</a>{% endif %}
+</form>
+</div></div>
+
+<div class="card">
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-sm mb-0 table-hover">
+  <thead><tr><th>Task</th><th>Assignee</th><th>Priority</th><th>Status</th><th>Due</th><th>Context</th><th></th></tr></thead>
+  <tbody>
+  {% for t in tasks %}
+  <tr>
+    <td><a href="{{ url_for('record_detail', kind='tasks', record_id=t.id) }}" class="primary-link">{{ t.title }}</a>
+      {% if t.description %}<div class="small-muted">{{ t.description[:60] }}{% if t.description|length > 60 %}…{% endif %}</div>{% endif %}
+    </td>
+    <td class="small-muted">{{ t.assignee.name if t.assignee else '—' }}</td>
+    <td><span class="status-badge priority-{{ t.priority }}">{{ t.priority }}</span></td>
+    <td><span class="status-badge status-{{ t.status }}">{{ t.status.replace('_',' ') }}</span></td>
+    <td class="small-muted text-nowrap">{{ t.due_date or '—' }}</td>
+    <td class="small-muted">{% if t.entity_type and t.entity_id %}{{ t.entity_type.rstrip('s') }} #{{ t.entity_id }}{% else %}—{% endif %}</td>
+    <td>
+      <form method="post" action="{{ url_for('update_task_status', task_id=t.id) }}" class="d-inline">
+        <input type="hidden" name="status" value="{{ 'done' if t.status != 'done' else 'todo' }}">
+        <button class="btn btn-sm btn-link p-0">{{ '✓' if t.status != 'done' else '↩' }}</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7" class="text-center small-muted py-3">No tasks found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+{% endblock %}

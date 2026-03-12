@@ -1,0 +1,36 @@
+{% extends 'base.html' %}{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div>
+    <h1>Polls &amp; Voting</h1>
+    <div class="small-muted">Internal votes and shareable public polls</div>
+  </div>
+  <a href="{{ url_for('polls_new') }}" class="btn btn-dark btn-sm">+ New poll</a>
+</div>
+
+<div class="row g-3">
+{% for poll in polls %}
+<div class="col-md-6 col-xl-4">
+  <div class="card h-100">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <h5 class="mb-0"><a href="{{ url_for('poll_detail', poll_id=poll.id) }}" class="primary-link">{{ poll.title }}</a></h5>
+        <span class="status-badge status-{{ poll.status }}">{{ poll.status }}</span>
+      </div>
+      {% if poll.description %}<p class="small mb-2">{{ poll.description[:120] }}{% if poll.description|length > 120 %}…{% endif %}</p>{% endif %}
+      <div class="small-muted d-flex gap-3 flex-wrap">
+        <span>{{ poll.poll_type }} choice</span>
+        {% if poll.is_public %}<span class="text-success">🔗 public link</span>{% endif %}
+        {% if poll.deadline %}<span>⏱ {{ poll.deadline.strftime('%Y-%m-%d') }}</span>{% endif %}
+        <span>{{ poll.votes.count() }} vote{{ 's' if poll.votes.count() != 1 }}</span>
+      </div>
+    </div>
+    <div class="card-footer bg-transparent py-2">
+      <a href="{{ url_for('poll_detail', poll_id=poll.id) }}" class="btn btn-sm btn-outline-secondary">View / Vote</a>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="col-12"><div class="card"><div class="card-body small-muted">No polls yet. <a href="{{ url_for('polls_new') }}">Create the first poll.</a></div></div></div>
+{% endfor %}
+</div>
+{% endblock %}

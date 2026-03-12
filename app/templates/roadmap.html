@@ -1,11 +1,88 @@
 {% extends 'base.html' %}{% block content %}
-<div class='row g-4'><div class='col-lg-4'><div class='card'><div class='card-body'><h3>Add roadmap item</h3><form method='post'>
-<select class='form-select mb-2' name='phase'><option value='phase_i'>Phase I</option><option value='phase_ii'>Phase II</option></select>
-<input class='form-control mb-2' name='title' placeholder='Title' required>
-<input class='form-control mb-2' type='number' name='year' placeholder='Year' required>
-<input class='form-control mb-2' name='owner' placeholder='Owner' value='{{ current_user.name }}' required>
-<select class='form-select mb-2' name='status'><option>planned</option><option>in_progress</option><option>completed</option></select>
-<textarea class='form-control mb-2' name='details' placeholder='Details'></textarea>
-<button class='btn btn-dark'>Save item</button></form></div></div></div>
-<div class='col-lg-8'><div class='card'><div class='card-body'><h3>Phase I / Phase II roadmap</h3><table class='table table-striped linked-row'><tr><th>Year</th><th>Phase</th><th>Title</th><th>Status</th></tr>{% for i in items %}<tr><td>{{ i.year }}</td><td>{{ i.phase }}</td><td><a class='primary-link' href='{{ url_for("record_detail", kind="roadmap", record_id=i.id) }}'>{{ i.title }}</a></td><td>{{ i.status }}</td></tr>{% endfor %}</table></div></div></div></div>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>Roadmap</h1>
+    <div class="small-muted">Phase I (2026–2028) and Phase II (2028–2031) milestones</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('roadmap_timeline') }}" class="btn btn-outline-secondary btn-sm">Timeline view</a>
+    <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newRoadmapForm">+ Add item</button>
+  </div>
+</div>
+
+<div class="collapse mb-3" id="newRoadmapForm">
+<div class="card"><div class="card-body">
+<form method="post" class="row g-2">
+  <div class="col-md-4"><input class="form-control form-control-sm" name="title" placeholder="Milestone title" required></div>
+  <div class="col-md-1"><input class="form-control form-control-sm" type="number" name="year" placeholder="Year" required></div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="phase">
+      <option value="phase_i">Phase I</option>
+      <option value="phase_ii">Phase II</option>
+      <option value="pilot">Pilot</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="status">
+      <option value="planned">planned</option>
+      <option value="in_progress">in progress</option>
+      <option value="completed">completed</option>
+      <option value="missed">missed</option>
+    </select>
+  </div>
+  <div class="col-md-2"><input class="form-control form-control-sm" name="owner" placeholder="Owner" value="{{ current_user.name }}"></div>
+  <div class="col-md-1"><button class="btn btn-sm btn-dark w-100">Save</button></div>
+  <div class="col-md-3"><input class="form-control form-control-sm" type="date" name="start_date" placeholder="Start date"></div>
+  <div class="col-md-3"><input class="form-control form-control-sm" type="date" name="end_date" placeholder="End date"></div>
+  <div class="col-md-6"><textarea class="form-control form-control-sm" name="details" placeholder="Details" style="min-height:60px"></textarea></div>
+</form>
+</div></div>
+</div>
+
+<!-- Phase I -->
+{% set phase_i_items = items | selectattr('phase', 'equalto', 'phase_i') | list %}
+{% set phase_ii_items = items | selectattr('phase', 'equalto', 'phase_ii') | list %}
+{% set pilot_items = items | rejectattr('phase', 'equalto', 'phase_i') | rejectattr('phase', 'equalto', 'phase_ii') | list %}
+
+{% for phase_label, phase_items, phase_color in [
+  ('Phase I · 2026–2028', phase_i_items, '#2d4a6b'),
+  ('Phase II · 2028–2031', phase_ii_items, '#4a2d6b'),
+  ('Pilot', pilot_items, '#5c7c5c')
+] %}
+{% if phase_items %}
+<div class="mb-4">
+  <div class="section-title" style="color:{{ phase_color }}">{{ phase_label }} ({{ phase_items|length }})</div>
+  <div class="card">
+    <div class="card-body p-0">
+      <table class="table table-hover linked-row mb-0">
+        <thead>
+          <tr>
+            <th>Year</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th class="hide-mobile">Owner</th>
+            <th class="hide-mobile">Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in phase_items | sort(attribute='year') %}
+          <tr>
+            <td class="small-muted fw-semibold">{{ i.year }}</td>
+            <td><a class="primary-link" href="{{ url_for('record_detail', kind='roadmap', record_id=i.id) }}">{{ i.title }}</a></td>
+            <td><span class="status-badge status-{{ i.status }}">{{ i.status }}</span></td>
+            <td class="hide-mobile small-muted">{{ i.owner }}</td>
+            <td class="hide-mobile small" style="max-width:250px;color:#555">{{ (i.details or '')[:90] }}{% if i.details and i.details|length > 90 %}…{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% if not items %}
+<div class="card"><div class="card-body small-muted">No roadmap items yet. Add the first milestone above.</div></div>
+{% endif %}
 {% endblock %}

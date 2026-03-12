@@ -1,0 +1,130 @@
+{% extends 'base.html' %}{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>{{ poll.title }}</h1>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+      <span class="status-badge status-{{ poll.status }}">{{ poll.status }}</span>
+      <span class="small-muted">{{ poll.poll_type }} choice</span>
+      {% if poll.deadline %}<span class="small-muted">⏱ deadline {{ poll.deadline.strftime('%Y-%m-%d %H:%M') }}</span>{% endif %}
+      {% if poll.is_public %}<span class="text-success small-muted">🔗 public link active</span>{% endif %}
+      <span class="small-muted">{{ total_votes }} total vote{{ 's' if total_votes != 1 }}</span>
+    </div>
+  </div>
+  <a href="{{ url_for('polls') }}" class="btn btn-outline-secondary btn-sm">← Polls</a>
+</div>
+
+{% if poll.description %}<div class="card mb-3"><div class="card-body small">{{ poll.description }}</div></div>{% endif %}
+
+<div class="row g-3">
+  <div class="col-md-7">
+
+    <!-- Vote form or results -->
+    {% if poll.status == 'open' and not user_voted %}
+    <div class="card mb-3">
+      <div class="card-header">Cast your vote</div>
+      <div class="card-body">
+        <form method="post">
+          {% for opt in options %}
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="{{ 'radio' if poll.poll_type == 'single' else 'checkbox' }}"
+                   name="option_id" value="{{ opt.id }}" id="opt{{ opt.id }}" {% if poll.poll_type == 'single' %}required{% endif %}>
+            <label class="form-check-label" for="opt{{ opt.id }}">{{ opt.option_text }}</label>
+          </div>
+          {% endfor %}
+          <button class="btn btn-dark mt-2">Submit vote</button>
+        </form>
+      </div>
+    </div>
+    {% elif user_voted %}
+    <div class="alert alert-info py-2">You have already voted in this poll.</div>
+    {% elif poll.status == 'closed' %}
+    <div class="alert alert-secondary py-2">This poll is closed.</div>
+    {% endif %}
+
+    <!-- Results -->
+    <div class="card">
+      <div class="card-header">Results</div>
+      <div class="card-body">
+        {% if options %}
+        {% for opt in options %}
+        {% set count = vote_counts.get(opt.id, 0) %}
+        {% set pct = ((count / total_votes * 100)|round(0)|int) if total_votes > 0 else 0 %}
+        <div class="mb-3">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="small fw-semibold">{{ opt.option_text }}</span>
+            <span class="small-muted">{{ count }} vote{{ 's' if count != 1 }} ({{ pct }}%)</span>
+          </div>
+          <div class="progress" style="height:12px">
+            <div class="progress-bar" role="progressbar" style="width:{{ pct }}%; background:#5c7c5c"></div>
+          </div>
+        </div>
+        {% endfor %}
+        <div class="small-muted text-end">{{ total_votes }} total vote{{ 's' if total_votes != 1 }}</div>
+        {% else %}
+        <p class="small-muted">No options defined.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-5">
+    <!-- Sharing -->
+    <div class="card mb-3">
+      <div class="card-header">Sharing & Invites</div>
+      <div class="card-body">
+        {% if poll.is_public %}
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Public link (no login required)</label>
+          <div class="input-group input-group-sm">
+            <input type="text" class="form-control" value="{{ request.host_url }}vote/{{ poll.public_token }}" readonly id="publicLink">
+            <button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('publicLink').value);this.textContent='Copied!'">Copy</button>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if is_manager %}
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Generate invite tokens</label>
+          <form method="post" action="{{ url_for('generate_poll_token', poll_id=poll.id) }}" class="d-flex gap-2">
+            <input class="form-control form-control-sm" name="label" placeholder="Name / email (optional)">
+            <input type="number" class="form-control form-control-sm" name="count" value="1" min="1" max="50" style="max-width:60px">
+            <button class="btn btn-sm btn-outline-dark">Generate</button>
+          </form>
+        </div>
+        {% endif %}
+
+        {% if is_manager %}
+        <form method="post" action="{{ url_for('toggle_poll_status', poll_id=poll.id) }}">
+          <button class="btn btn-sm btn-outline-{{ 'warning' if poll.status == 'open' else 'success' }}">
+            {{ 'Close poll' if poll.status == 'open' else 'Re-open poll' }}
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Invite tokens -->
+    {% if tokens and is_manager %}
+    <div class="card">
+      <div class="card-header">Invite tokens ({{ tokens|length }})</div>
+      <div class="card-body p-0">
+        <div class="table-responsive" style="max-height:300px;overflow-y:auto">
+        <table class="table table-sm mb-0">
+          <tr><th>Label</th><th>Status</th><th>Link</th></tr>
+          {% for t in tokens %}
+          <tr>
+            <td class="small-muted">{{ t.label or '—' }}</td>
+            <td>{% if t.used %}<span class="status-badge status-closed">used</span>{% else %}<span class="status-badge status-open">unused</span>{% endif %}</td>
+            <td>
+              <input type="text" class="form-control form-control-sm" value="{{ request.host_url }}vote/{{ t.token }}" readonly style="font-size:0.68rem" onclick="this.select()">
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
