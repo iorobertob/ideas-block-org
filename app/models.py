@@ -263,6 +263,7 @@ class Milestone(OwnershipMixin, db.Model):
     target_date = db.Column(db.Date, nullable=True)
     status = db.Column(db.String(30), default='pending')
     description = db.Column(db.Text, default='')
+    url = db.Column(db.String(500), default='')
 
 
 class Task(OwnershipMixin, db.Model):
@@ -276,6 +277,7 @@ class Task(OwnershipMixin, db.Model):
     entity_type = db.Column(db.String(50), nullable=True)
     entity_id = db.Column(db.Integer, nullable=True)
     milestone_id = db.Column(db.Integer, db.ForeignKey('milestone.id'), nullable=True)
+    url = db.Column(db.String(500), default='')
     assignee = db.relationship('User', foreign_keys=[assigned_to_id])
     milestone = db.relationship('Milestone')
 
@@ -333,6 +335,7 @@ class LegacyTask(OwnershipMixin, db.Model):
     status = db.Column(db.String(30), default='pending')
     priority = db.Column(db.String(20), default='normal')
     notes = db.Column(db.Text, default='')
+    url = db.Column(db.String(500), default='')
 
 
 class PollToken(db.Model):

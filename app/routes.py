@@ -83,6 +83,8 @@ def assign_field(obj, field, raw_value):
         setattr(obj, name, int(raw_value) if raw_value else None)
     elif field_type == 'checkbox':
         setattr(obj, name, name in request.form)
+    elif field_type == 'url':
+        setattr(obj, name, raw_value.strip())
     elif field_type == 'password':
         if raw_value:
             obj.set_password(raw_value)
@@ -402,6 +404,13 @@ RECORD_CONFIG = {
             {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('todo', 'To do'), ('in_progress', 'In progress'), ('done', 'Done'), ('blocked', 'Blocked')]},
             {'name': 'priority', 'label': 'Priority', 'type': 'select', 'choices': [('low', 'Low'), ('normal', 'Normal'), ('high', 'High'), ('urgent', 'Urgent')]},
             {'name': 'due_date', 'label': 'Due date', 'type': 'date'},
+            {'name': 'entity_type', 'label': 'Linked to (type)', 'type': 'select', 'choices': [
+                ('', '— none —'), ('projects', 'Project'), ('events', 'Event'),
+                ('working_groups', 'Working Group'), ('governance', 'Meeting'),
+                ('partnerships', 'Partnership'), ('legacy_tasks', 'Legacy Task'),
+            ]},
+            {'name': 'entity_id', 'label': 'Linked to (ID)', 'type': 'int'},
+            {'name': 'url', 'label': 'Reference URL', 'type': 'url'},
             {'name': 'assigned_to_id', 'label': 'Assignee', 'type': 'select', 'nullable': True,
              'options_provider': lambda fn: [('', '— unassigned —')] + select_options_for(fn)},
         ],
@@ -418,6 +427,7 @@ RECORD_CONFIG = {
             {'name': 'target_date', 'label': 'Target date', 'type': 'date'},
             {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('pending', 'pending'), ('reached', 'reached'), ('missed', 'missed')]},
             {'name': 'description', 'label': 'Description', 'type': 'textarea'},
+            {'name': 'url', 'label': 'Reference URL', 'type': 'url'},
         ],
     },
     'facilities': {
@@ -476,6 +486,7 @@ RECORD_CONFIG = {
             ]},
             {'name': 'description', 'label': 'Description', 'type': 'textarea'},
             {'name': 'notes', 'label': 'Notes / progress', 'type': 'textarea'},
+            {'name': 'url', 'label': 'Reference URL', 'type': 'url'},
         ],
     },
     'constitution': {
@@ -1045,6 +1056,7 @@ def register_routes(app):
                 assigned_to_id=int(request.form['assigned_to_id']) if request.form.get('assigned_to_id') else None,
                 entity_type=request.form.get('entity_type') or None,
                 entity_id=int(request.form['entity_id']) if request.form.get('entity_id') else None,
+                url=request.form.get('url', '').strip(),
                 created_by_id=current_user().id,
             )
             db.session.add(t)
@@ -1057,20 +1069,37 @@ def register_routes(app):
         status_f = request.args.get('status', '')
         assignee_f = request.args.get('assignee', '')
         priority_f = request.args.get('priority', '')
+        entity_type_f = request.args.get('entity_type', '')
         query = Task.query
         if q:
-            query = query.filter(Task.title.ilike(f'%{q}%'))
+            query = query.filter(Task.title.ilike(f'%{q}%') | Task.description.ilike(f'%{q}%'))
         if status_f:
             query = query.filter_by(status=status_f)
         if assignee_f:
             query = query.filter_by(assigned_to_id=int(assignee_f))
         if priority_f:
             query = query.filter_by(priority=priority_f)
+        if entity_type_f:
+            query = query.filter_by(entity_type=entity_type_f)
+        # Build entity lookup maps for display
+        entity_maps = {
+            'projects': {p.id: p.title for p in ResearchProject.query.all()},
+            'events': {e.id: e.title for e in DisseminationEvent.query.all()},
+            'working_groups': {wg.id: wg.name for wg in WorkingGroup.query.all()},
+            'governance': {m.id: m.title for m in Meeting.query.all()},
+            'partnerships': {p.id: p.institution.name if p.institution else f'Partnership #{p.id}' for p in Partnership.query.all()},
+        }
         return render_template('tasks.html',
                                tasks=query.order_by(Task.due_date.asc(), Task.priority.desc()).all(),
                                users=User.query.order_by(User.name).all(),
                                projects=ResearchProject.query.order_by(ResearchProject.title).all(),
-                               q=q, status_f=status_f, assignee_f=assignee_f, priority_f=priority_f,
+                               events=DisseminationEvent.query.order_by(DisseminationEvent.event_date.desc()).all(),
+                               working_groups=WorkingGroup.query.order_by(WorkingGroup.name).all(),
+                               meetings=Meeting.query.order_by(Meeting.meeting_date.desc()).limit(20).all(),
+                               partnerships=Partnership.query.join(Institution).order_by(Institution.name).all(),
+                               entity_maps=entity_maps,
+                               q=q, status_f=status_f, assignee_f=assignee_f,
+                               priority_f=priority_f, entity_type_f=entity_type_f,
                                now=date.today())
 
     @app.route('/tasks/<int:task_id>/status', methods=['POST'])
@@ -1512,6 +1541,107 @@ def register_routes(app):
         db.session.commit()
         flash(f'"{task.title}" marked as {new_status}.', 'success')
         return redirect(url_for('legacy'))
+
+    # ── Org Health Check ──
+
+    @app.route('/health')
+    def health():
+        if not login_required():
+            return redirect(url_for('login'))
+        today = date.today()
+
+        # Stale projects (active, no session in 30+ days, or never)
+        all_active_projects = ResearchProject.query.filter_by(status='active').all()
+        stale_projects = []
+        for p in all_active_projects:
+            last = ResearchSession.query.filter_by(project_id=p.id).order_by(ResearchSession.session_date.desc()).first()
+            if last is None:
+                stale_projects.append({'project': p, 'days': None, 'issue': 'no sessions logged'})
+            elif (today - last.session_date).days > 30:
+                stale_projects.append({'project': p, 'days': (today - last.session_date).days, 'issue': f'{(today - last.session_date).days} days since last session'})
+
+        # Projects with no outputs
+        projects_no_output = [p for p in all_active_projects if not (p.outputs or '').strip()]
+
+        # Overdue tasks
+        overdue_tasks = Task.query.filter(
+            Task.due_date < today, Task.status.notin_(['done'])
+        ).order_by(Task.due_date.asc()).limit(10).all()
+
+        # High/urgent open risks
+        high_risks = RiskRegister.query.filter(
+            RiskRegister.status != 'closed',
+            RiskRegister.severity.in_(['High', 'Critical'])
+        ).all()
+
+        # Milestones missed or overdue
+        overdue_milestones = Milestone.query.filter(
+            Milestone.target_date < today,
+            Milestone.status == 'pending'
+        ).order_by(Milestone.target_date.asc()).limit(10).all()
+
+        # Urgent legacy tasks overdue
+        overdue_legacy = LegacyTask.query.filter(
+            LegacyTask.deadline < today,
+            LegacyTask.status.notin_(['done'])
+        ).order_by(LegacyTask.deadline.asc()).all()
+
+        # Equipment without transfer plan
+        equipment_no_plan = Equipment.query.filter(
+            (Equipment.transfer_plan == '') | (Equipment.transfer_plan == None)
+        ).filter(Equipment.status != 'decommissioned').all()
+
+        # Blocked items
+        blocked_tasks = LegacyTask.query.filter_by(status='blocked').all()
+        blocked_tasks_all = Task.query.filter_by(status='blocked').all()
+
+        # Upcoming deadlines in next 30 days (legacy + milestones)
+        future_date = date(today.year + (today.month // 12), (today.month % 12) + 1, today.day) if today.month < 12 else date(today.year + 1, 1, today.day)
+        upcoming_deadlines = []
+        for lt in LegacyTask.query.filter(
+            LegacyTask.deadline >= today,
+            LegacyTask.deadline <= future_date,
+            LegacyTask.status.notin_(['done'])
+        ).order_by(LegacyTask.deadline.asc()).limit(10).all():
+            upcoming_deadlines.append({'label': lt.title, 'date': lt.deadline, 'kind': 'legacy', 'url': url_for('record_detail', kind='legacy_tasks', record_id=lt.id)})
+        for ms in Milestone.query.filter(
+            Milestone.target_date >= today,
+            Milestone.target_date <= future_date,
+            Milestone.status == 'pending'
+        ).order_by(Milestone.target_date.asc()).limit(10).all():
+            upcoming_deadlines.append({'label': ms.title, 'date': ms.target_date, 'kind': 'milestone', 'url': url_for('record_detail', kind='milestones', record_id=ms.id)})
+        upcoming_deadlines.sort(key=lambda x: x['date'])
+
+        # Score the health (simple points system)
+        issues = (len(stale_projects) + len(overdue_tasks) + len(high_risks) +
+                  len(overdue_milestones) + len(overdue_legacy) + len(blocked_tasks))
+        if issues == 0:
+            health_label = 'Good'
+            health_color = '#5c7c5c'
+        elif issues <= 3:
+            health_label = 'Attention needed'
+            health_color = '#ffc107'
+        elif issues <= 8:
+            health_label = 'Several issues'
+            health_color = '#fd7e14'
+        else:
+            health_label = 'Critical'
+            health_color = '#dc3545'
+
+        return render_template('health.html', today=today,
+                               stale_projects=stale_projects,
+                               projects_no_output=projects_no_output,
+                               overdue_tasks=overdue_tasks,
+                               high_risks=high_risks,
+                               overdue_milestones=overdue_milestones,
+                               overdue_legacy=overdue_legacy,
+                               equipment_no_plan=equipment_no_plan,
+                               blocked_tasks=blocked_tasks,
+                               blocked_tasks_all=blocked_tasks_all,
+                               upcoming_deadlines=upcoming_deadlines,
+                               health_label=health_label,
+                               health_color=health_color,
+                               issues=issues)
 
     # ── Print views ──
 

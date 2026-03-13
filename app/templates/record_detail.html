@@ -25,7 +25,13 @@
           {% for item in display_fields %}
             {% if item.field.type != 'password' %}
             <dt>{{ item.field.label }}</dt>
-            <dd>{{ item.display if item.display not in [None, ''] else '—' }}</dd>
+            <dd>
+              {% if item.field.type == 'url' and item.display %}
+                <a href="{{ item.display }}" target="_blank" rel="noopener" style="font-size:0.87rem">{{ item.display[:60] }}{% if item.display|length > 60 %}…{% endif %}</a>
+              {% else %}
+                {{ item.display if item.display not in [None, ''] else '—' }}
+              {% endif %}
+            </dd>
             {% endif %}
           {% endfor %}
         </dl>
@@ -62,6 +68,8 @@
               <div class="mb-2"><label class="form-label small fw-semibold">{{ field.label }}</label><input class="form-control form-control-sm" type="number" name="{{ field.name }}" value="{{ item.value }}"></div>
             {% elif field.type == 'password' %}
               <div class="mb-2"><label class="form-label small fw-semibold">{{ field.label }}</label><input class="form-control form-control-sm" type="password" name="{{ field.name }}" placeholder="Leave blank to keep current"></div>
+            {% elif field.type == 'url' %}
+              <div class="mb-2"><label class="form-label small fw-semibold">{{ field.label }}</label><input class="form-control form-control-sm" type="url" name="{{ field.name }}" value="{{ item.value }}" placeholder="https://…"></div>
             {% else %}
               <div class="mb-2"><label class="form-label small fw-semibold">{{ field.label }}</label><input class="form-control form-control-sm" {% if field.type == 'email' %}type="email"{% endif %} name="{{ field.name }}" value="{{ item.value }}"></div>
             {% endif %}

@@ -1,0 +1,239 @@
+{% extends 'base.html' %}{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>Organisation Health Check</h1>
+    <div class="small-muted">Surfacing issues that need attention across all modules · {{ today }}</div>
+  </div>
+  <div>
+    <span class="fw-bold" style="color:{{ health_color }};font-size:1.1rem">● {{ health_label }}</span>
+    <div class="small-muted">{{ issues }} issue{{ 's' if issues != 1 }} detected</div>
+  </div>
+</div>
+
+{% if issues == 0 %}
+<div class="alert alert-success py-3 mb-4">
+  <strong>All clear.</strong> No overdue tasks, stale projects, high-severity risks, or outstanding blockers detected.
+</div>
+{% endif %}
+
+<div class="row g-3">
+
+<!-- Stale projects -->
+{% if stale_projects %}
+<div class="col-12">
+  <div class="card border-start border-4 border-danger">
+    <div class="card-header d-flex justify-content-between">
+      Documentation gaps — active projects
+      <a href="{{ url_for('projects') }}" class="small-muted">all projects →</a>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Project</th><th>Phase</th><th>Issue</th><th></th></tr></thead>
+        <tbody>
+        {% for item in stale_projects %}
+        <tr>
+          <td><a href="{{ url_for('record_detail', kind='projects', record_id=item.project.id) }}" class="primary-link">{{ item.project.title }}</a></td>
+          <td><span class="agenda-pill {% if item.project.phase == 'phase_i' %}badge-phase-i{% elif item.project.phase == 'phase_ii' %}badge-phase-ii{% else %}badge-pilot{% endif %}">{{ item.project.phase }}</span></td>
+          <td class="text-danger">{{ item.issue }}</td>
+          <td><a href="{{ url_for('record_detail', kind='projects', record_id=item.project.id) }}#newSessionForm" class="btn btn-sm btn-outline-danger">Log session</a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Overdue tasks -->
+{% if overdue_tasks %}
+<div class="col-md-6">
+  <div class="card border-start border-4" style="border-color:#dc3545 !important">
+    <div class="card-header d-flex justify-content-between">
+      Overdue tasks
+      <a href="{{ url_for('tasks') }}" class="small-muted">all tasks →</a>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <tbody>
+        {% for t in overdue_tasks %}
+        <tr>
+          <td><a href="{{ url_for('record_detail', kind='tasks', record_id=t.id) }}" class="primary-link">{{ t.title[:50] }}{% if t.title|length > 50 %}…{% endif %}</a></td>
+          <td class="small-muted text-danger">{{ t.due_date }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- High/Critical risks -->
+{% if high_risks %}
+<div class="col-md-6">
+  <div class="card border-start border-4" style="border-color:#fd7e14 !important">
+    <div class="card-header d-flex justify-content-between">
+      High/Critical open risks
+      <a href="{{ url_for('risks') }}" class="small-muted">all risks →</a>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <tbody>
+        {% for r in high_risks %}
+        <tr>
+          <td><a href="{{ url_for('record_detail', kind='risks', record_id=r.id) }}" class="primary-link">{{ r.title[:50] }}{% if r.title|length > 50 %}…{% endif %}</a></td>
+          <td><span class="status-badge severity-{{ r.severity }}">{{ r.severity }}</span></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Overdue milestones -->
+{% if overdue_milestones %}
+<div class="col-md-6">
+  <div class="card border-start border-4" style="border-color:#ffc107 !important">
+    <div class="card-header">Overdue milestones</div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <tbody>
+        {% for m in overdue_milestones %}
+        <tr>
+          <td><a href="{{ url_for('record_detail', kind='milestones', record_id=m.id) }}" class="primary-link">{{ m.title[:50] }}</a></td>
+          <td class="small-muted text-danger">{{ m.target_date }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Overdue legacy tasks -->
+{% if overdue_legacy %}
+<div class="col-md-6">
+  <div class="card border-start border-4" style="border-color:#e8b86d !important">
+    <div class="card-header d-flex justify-content-between">
+      Overdue legacy tasks
+      <a href="{{ url_for('legacy') }}" class="small-muted">all →</a>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <tbody>
+        {% for t in overdue_legacy %}
+        <tr>
+          <td><a href="{{ url_for('record_detail', kind='legacy_tasks', record_id=t.id) }}" class="primary-link">{{ t.title[:45] }}{% if t.title|length > 45 %}…{% endif %}</a></td>
+          <td class="small-muted">{{ t.category }}</td>
+          <td class="text-danger small-muted">{{ t.deadline }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Equipment without transfer plan -->
+{% if equipment_no_plan %}
+<div class="col-md-6">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between">
+      Equipment without transfer plan
+      <a href="{{ url_for('equipment') }}" class="small-muted">manage →</a>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <tbody>
+        {% for e in equipment_no_plan[:8] %}
+        <tr>
+          <td><a href="{{ url_for('record_detail', kind='equipment', record_id=e.id) }}" class="primary-link">{{ e.name }}</a></td>
+          <td class="small-muted">{{ e.category }}</td>
+        </tr>
+        {% endfor %}
+        {% if equipment_no_plan|length > 8 %}<tr><td colspan="2" class="small-muted">+ {{ equipment_no_plan|length - 8 }} more</td></tr>{% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Blocked items -->
+{% if blocked_tasks or blocked_tasks_all %}
+<div class="col-md-6">
+  <div class="card">
+    <div class="card-header">Blocked items</div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <tbody>
+        {% for t in blocked_tasks %}
+        <tr>
+          <td><a href="{{ url_for('record_detail', kind='legacy_tasks', record_id=t.id) }}" class="primary-link">{{ t.title[:45] }}</a></td>
+          <td class="small-muted">legacy</td>
+        </tr>
+        {% endfor %}
+        {% for t in blocked_tasks_all %}
+        <tr>
+          <td><a href="{{ url_for('record_detail', kind='tasks', record_id=t.id) }}" class="primary-link">{{ t.title[:45] }}</a></td>
+          <td class="small-muted">task</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Projects without outputs -->
+{% if projects_no_output %}
+<div class="col-md-6">
+  <div class="card">
+    <div class="card-header">Active projects with no documented outputs</div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <tbody>
+        {% for p in projects_no_output %}
+        <tr>
+          <td><a href="{{ url_for('record_detail', kind='projects', record_id=p.id) }}" class="primary-link">{{ p.title }}</a></td>
+          <td class="small-muted">{{ p.lead }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Upcoming deadlines -->
+{% if upcoming_deadlines %}
+<div class="col-12">
+  <div class="card">
+    <div class="card-header">Upcoming deadlines — next 30 days</div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Item</th><th>Type</th><th>Due</th></tr></thead>
+        <tbody>
+        {% for d in upcoming_deadlines %}
+        <tr>
+          <td><a href="{{ d.url }}" class="primary-link">{{ d.label[:60] }}{% if d.label|length > 60 %}…{% endif %}</a></td>
+          <td class="small-muted"><span class="agenda-pill">{{ d.kind }}</span></td>
+          <td class="small-muted">{{ d.date }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+</div>
+{% endblock %}
