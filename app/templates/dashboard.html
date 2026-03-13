@@ -16,15 +16,27 @@
 <!-- Stats row -->
 <div class="row g-2 mb-4">
   {% set stat_icons = {'projects':'🔬','bookings':'📅','equipment':'🔧','partners':'🤝','net_budget':'💶','open_tasks':'✅','overdue_tasks':'🔴','open_risks':'⚠️'} %}
+  {% set stat_urls = {
+    'projects':      url_for('projects'),
+    'bookings':      url_for('bookings'),
+    'equipment':     url_for('equipment'),
+    'partners':      url_for('partnerships'),
+    'net_budget':    url_for('budget'),
+    'open_tasks':    url_for('tasks'),
+    'overdue_tasks': url_for('tasks', status='todo'),
+    'open_risks':    url_for('risks'),
+  } %}
   {% for key, value in stats.items() %}
   <div class="col-6 col-sm-4 col-md-3 col-xl-auto flex-xl-fill">
-    <div class="card h-100">
+    <a href="{{ stat_urls.get(key, '#') }}" class="text-decoration-none">
+    <div class="card h-100" style="transition:box-shadow .15s;cursor:pointer" onmouseover="this.style.boxShadow='0 3px 10px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
       <div class="card-body p-3 text-center">
         <div style="font-size:1.4rem">{{ stat_icons.get(key,'·') }}</div>
         <div class="small-muted" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.04em">{{ key.replace('_',' ') }}</div>
-        <div class="fw-bold fs-5">{{ value }}</div>
+        <div class="fw-bold fs-5" style="color:#1a1a1a">{{ value }}</div>
       </div>
     </div>
+    </a>
   </div>
   {% endfor %}
 </div>
