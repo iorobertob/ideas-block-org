@@ -79,26 +79,38 @@
 </form>
 </div></div>
 
+{% set project_map = {} %}
+{% for p in projects %}{% set _ = project_map.update({p.id: p.title}) %}{% endfor %}
+{% set today_str = now.strftime('%Y-%m-%d') if now else '' %}
+
 <div class="card">
 <div class="card-body p-0">
 <div class="table-responsive">
 <table class="table table-sm mb-0 table-hover">
-  <thead><tr><th>Task</th><th>Assignee</th><th>Priority</th><th>Status</th><th>Due</th><th>Context</th><th></th></tr></thead>
+  <thead><tr><th>Task</th><th class="hide-mobile">Assignee</th><th>Priority</th><th>Status</th><th>Due</th><th class="hide-mobile">Project</th><th></th></tr></thead>
   <tbody>
   {% for t in tasks %}
-  <tr>
-    <td><a href="{{ url_for('record_detail', kind='tasks', record_id=t.id) }}" class="primary-link">{{ t.title }}</a>
+  {% set overdue = t.due_date and t.due_date|string < today_str and t.status != 'done' %}
+  <tr {% if overdue %}class="table-danger"{% endif %}>
+    <td>
+      <a href="{{ url_for('record_detail', kind='tasks', record_id=t.id) }}" class="primary-link">{{ t.title }}</a>
+      {% if overdue %}<span class="ms-1 small text-danger fw-semibold">overdue</span>{% endif %}
       {% if t.description %}<div class="small-muted">{{ t.description[:60] }}{% if t.description|length > 60 %}…{% endif %}</div>{% endif %}
     </td>
-    <td class="small-muted">{{ t.assignee.name if t.assignee else '—' }}</td>
+    <td class="hide-mobile small-muted">{{ t.assignee.name if t.assignee else '—' }}</td>
     <td><span class="status-badge priority-{{ t.priority }}">{{ t.priority }}</span></td>
     <td><span class="status-badge status-{{ t.status }}">{{ t.status.replace('_',' ') }}</span></td>
-    <td class="small-muted text-nowrap">{{ t.due_date or '—' }}</td>
-    <td class="small-muted">{% if t.entity_type and t.entity_id %}{{ t.entity_type.rstrip('s') }} #{{ t.entity_id }}{% else %}—{% endif %}</td>
+    <td class="small-muted text-nowrap {% if overdue %}text-danger fw-semibold{% endif %}">{{ t.due_date or '—' }}</td>
+    <td class="hide-mobile small-muted">
+      {% if t.entity_type == 'projects' and t.entity_id %}
+        <a href="{{ url_for('record_detail', kind='projects', record_id=t.entity_id) }}" class="small-muted text-decoration-none">{{ project_map.get(t.entity_id, 'Project #' ~ t.entity_id)[:30] }}</a>
+      {% elif t.entity_type and t.entity_id %}{{ t.entity_type }} #{{ t.entity_id }}
+      {% else %}—{% endif %}
+    </td>
     <td>
       <form method="post" action="{{ url_for('update_task_status', task_id=t.id) }}" class="d-inline">
         <input type="hidden" name="status" value="{{ 'done' if t.status != 'done' else 'todo' }}">
-        <button class="btn btn-sm btn-link p-0">{{ '✓' if t.status != 'done' else '↩' }}</button>
+        <button class="btn btn-sm btn-link p-0" title="{{ 'Mark done' if t.status != 'done' else 'Reopen' }}">{{ '✓' if t.status != 'done' else '↩' }}</button>
       </form>
     </td>
   </tr>

@@ -520,6 +520,10 @@ def register_routes(app):
             return redirect(url_for('login'))
         income = db.session.query(func.coalesce(func.sum(BudgetItem.amount), 0)).filter_by(direction='income').scalar()
         expense = db.session.query(func.coalesce(func.sum(BudgetItem.amount), 0)).filter_by(direction='expense').scalar()
+        overdue_count = Task.query.filter(
+            Task.due_date < date.today(),
+            Task.status.notin_(['done'])
+        ).count()
         stats = {
             'projects': ResearchProject.query.count(),
             'bookings': Booking.query.count(),
@@ -527,7 +531,7 @@ def register_routes(app):
             'partners': Partnership.query.count(),
             'net_budget': round(income - expense, 2),
             'open_tasks': Task.query.filter(Task.status.in_(['todo', 'in_progress'])).count(),
-            'working_groups': WorkingGroup.query.filter_by(status='active').count(),
+            'overdue_tasks': overdue_count,
             'open_risks': RiskRegister.query.filter(RiskRegister.status != 'closed').count(),
         }
         upcoming = Booking.query.filter(Booking.start_dt >= datetime.utcnow()).order_by(Booking.start_dt.asc()).limit(6).all()
@@ -1013,7 +1017,8 @@ def register_routes(app):
                                tasks=query.order_by(Task.due_date.asc(), Task.priority.desc()).all(),
                                users=User.query.order_by(User.name).all(),
                                projects=ResearchProject.query.order_by(ResearchProject.title).all(),
-                               q=q, status_f=status_f, assignee_f=assignee_f, priority_f=priority_f)
+                               q=q, status_f=status_f, assignee_f=assignee_f, priority_f=priority_f,
+                               now=date.today())
 
     @app.route('/tasks/<int:task_id>/status', methods=['POST'])
     def update_task_status(task_id):
