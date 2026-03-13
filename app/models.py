@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import declared_attr
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date
 
@@ -7,7 +8,9 @@ db = SQLAlchemy()
 
 
 class OwnershipMixin:
-    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    @declared_attr
+    def created_by_id(cls):
+        return db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
 
 class User(db.Model):
