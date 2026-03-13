@@ -62,6 +62,7 @@ class ResearchProject(OwnershipMixin, db.Model):
     budget_allocation = db.Column(db.Float, default=0.0)
     memberships = db.relationship('ProjectMembership', backref='project', lazy='dynamic')
     milestones = db.relationship('Milestone', backref='project', lazy='dynamic', order_by='Milestone.target_date')
+    sessions = db.relationship('ResearchSession', lazy='dynamic', foreign_keys='ResearchSession.project_id', overlaps='project')
 
 
 class Booking(OwnershipMixin, db.Model):
