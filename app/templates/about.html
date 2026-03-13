@@ -115,7 +115,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card mb-3">
       <div class="card-header">Platform version</div>
       <div class="card-body small">
         <dl class="kv mb-0">
@@ -126,6 +126,55 @@
         </dl>
       </div>
     </div>
+
+    {% if live_stats %}
+    <div class="card">
+      <div class="card-header">Live platform data</div>
+      <div class="card-body">
+        <div class="row g-2">
+          <div class="col-6">
+            <div class="p-2 bg-light rounded text-center">
+              <div class="fw-bold fs-5">{{ live_stats.active_projects }}</div>
+              <div class="small-muted">active projects</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 bg-light rounded text-center">
+              <div class="fw-bold fs-5">{{ live_stats.research_sessions }}</div>
+              <div class="small-muted">sessions logged</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 bg-light rounded text-center">
+              <div class="fw-bold fs-5">{{ live_stats.total_meetings }}</div>
+              <div class="small-muted">meetings recorded</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 bg-light rounded text-center">
+              <div class="fw-bold fs-5">{{ live_stats.approved_proposals }}/{{ live_stats.approved_proposals + live_stats.rejected_proposals }}</div>
+              <div class="small-muted">proposals approved</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 bg-light rounded text-center">
+              <div class="fw-bold fs-5">{{ live_stats.equipment_with_plan }}/{{ live_stats.equipment_items }}</div>
+              <div class="small-muted">equipment with transfer plan</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 bg-light rounded text-center">
+              <div class="fw-bold fs-5">{{ live_stats.legacy_done }}/{{ live_stats.legacy_total }}</div>
+              <div class="small-muted">legacy tasks complete</div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-2 text-end">
+          <a href="{{ url_for('health') }}" class="small-muted">health check →</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

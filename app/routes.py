@@ -1755,4 +1755,22 @@ def register_routes(app):
     def about():
         if not login_required():
             return redirect(url_for('login'))
-        return render_template('about.html')
+        live_stats = {
+            'active_projects': ResearchProject.query.filter_by(status='active').count(),
+            'research_sessions': ResearchSession.query.count(),
+            'total_sessions_observations': ResearchSession.query.filter(ResearchSession.observations != '').count(),
+            'total_meetings': Meeting.query.count(),
+            'approved_proposals': ProposalRecord.query.filter_by(outcome='approved').count(),
+            'rejected_proposals': ProposalRecord.query.filter_by(outcome='rejected').count(),
+            'active_partnerships': Partnership.query.filter_by(status='active').count(),
+            'equipment_items': Equipment.query.count(),
+            'equipment_with_plan': Equipment.query.filter(Equipment.transfer_plan != '').count(),
+            'total_budget_income': db.session.query(func.coalesce(func.sum(BudgetItem.amount), 0)).filter_by(direction='income').scalar(),
+            'total_budget_expense': db.session.query(func.coalesce(func.sum(BudgetItem.amount), 0)).filter_by(direction='expense').scalar(),
+            'open_risks': RiskRegister.query.filter(RiskRegister.status != 'closed').count(),
+            'legacy_done': LegacyTask.query.filter_by(status='done').count(),
+            'legacy_total': LegacyTask.query.count(),
+            'protocol_rules': ProtocolRule.query.count(),
+            'policy_docs': PolicyDocument.query.count(),
+        }
+        return render_template('about.html', live_stats=live_stats)
