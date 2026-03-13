@@ -1499,6 +1499,86 @@ def register_routes(app):
         flash(f'"{task.title}" marked as {new_status}.', 'success')
         return redirect(url_for('legacy'))
 
+    # ── Global Search ──
+
+    @app.route('/search')
+    def search():
+        if not login_required():
+            return redirect(url_for('login'))
+        q = request.args.get('q', '').strip()
+        if not q or len(q) < 2:
+            return render_template('search.html', q=q, results={}, total=0)
+        like = f'%{q}%'
+        results = {}
+
+        projects = ResearchProject.query.filter(
+            ResearchProject.title.ilike(like) |
+            ResearchProject.lead.ilike(like) |
+            ResearchProject.research_question.ilike(like) |
+            ResearchProject.outputs.ilike(like)
+        ).limit(10).all()
+        if projects:
+            results['projects'] = [{'label': p.title, 'sub': f'{p.phase} · {p.lead}', 'url': url_for('record_detail', kind='projects', record_id=p.id)} for p in projects]
+
+        sessions = ResearchSession.query.filter(
+            ResearchSession.observations.ilike(like) |
+            ResearchSession.methods_used.ilike(like) |
+            ResearchSession.open_questions.ilike(like) |
+            ResearchSession.facilitator.ilike(like)
+        ).limit(10).all()
+        if sessions:
+            results['sessions'] = [{'label': f'Session {s.session_date}', 'sub': s.facilitator + (' · ' + s.observations[:60] if s.observations else ''), 'url': url_for('record_detail', kind='sessions', record_id=s.id)} for s in sessions]
+
+        meetings = Meeting.query.filter(
+            Meeting.title.ilike(like) |
+            Meeting.body.ilike(like) |
+            Meeting.decisions.ilike(like)
+        ).limit(10).all()
+        if meetings:
+            results['meetings'] = [{'label': m.title, 'sub': str(m.meeting_date) + ' · ' + m.meeting_type, 'url': url_for('record_detail', kind='governance', record_id=m.id)} for m in meetings]
+
+        risks = RiskRegister.query.filter(
+            RiskRegister.title.ilike(like) |
+            RiskRegister.mitigation.ilike(like) |
+            RiskRegister.owner.ilike(like)
+        ).limit(8).all()
+        if risks:
+            results['risks'] = [{'label': r.title, 'sub': f'{r.severity} · {r.owner}', 'url': url_for('record_detail', kind='risks', record_id=r.id)} for r in risks]
+
+        equipment = Equipment.query.filter(
+            Equipment.name.ilike(like) |
+            Equipment.category.ilike(like) |
+            Equipment.owner.ilike(like)
+        ).limit(8).all()
+        if equipment:
+            results['equipment'] = [{'label': e.name, 'sub': f'{e.category} · {e.status}', 'url': url_for('record_detail', kind='equipment', record_id=e.id)} for e in equipment]
+
+        policies = PolicyDocument.query.filter(
+            PolicyDocument.title.ilike(like) |
+            PolicyDocument.content.ilike(like) |
+            PolicyDocument.category.ilike(like)
+        ).limit(8).all()
+        if policies:
+            results['policies'] = [{'label': p.title, 'sub': f'{p.category} v{p.version}', 'url': url_for('record_detail', kind='policies', record_id=p.id)} for p in policies]
+
+        events = DisseminationEvent.query.filter(
+            DisseminationEvent.title.ilike(like) |
+            DisseminationEvent.format.ilike(like) |
+            DisseminationEvent.notes.ilike(like)
+        ).limit(8).all()
+        if events:
+            results['events'] = [{'label': e.title, 'sub': f'{e.event_date} · {e.format}', 'url': url_for('record_detail', kind='events', record_id=e.id)} for e in events]
+
+        institutions = Institution.query.filter(
+            Institution.name.ilike(like) |
+            Institution.notes.ilike(like)
+        ).limit(8).all()
+        if institutions:
+            results['institutions'] = [{'label': i.name, 'sub': i.category, 'url': url_for('record_detail', kind='institutions', record_id=i.id)} for i in institutions]
+
+        total = sum(len(v) for v in results.values())
+        return render_template('search.html', q=q, results=results, total=total)
+
     # ── About ──
 
     @app.route('/about')

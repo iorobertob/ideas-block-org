@@ -138,6 +138,11 @@
           </ul>
         </li>
         <li class="nav-item">
+          <form method="get" action="{{ url_for('search') }}" class="d-flex ms-2">
+            <input class="form-control form-control-sm" name="q" placeholder="Search…" style="width:140px;background:#2d2d2d;border-color:#444;color:#ddd;font-size:0.78rem" autocomplete="off">
+          </form>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="{{ url_for('index') }}" style="font-size:0.78rem">⌂</a>
         </li>
         <li class="nav-item">
