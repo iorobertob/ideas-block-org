@@ -618,7 +618,7 @@ def register_routes(app):
             query = query.filter_by(phase=phase)
         return render_template('projects.html',
                                projects=query.order_by(ResearchProject.start_date.desc()).all(),
-                               q=q, status=status, phase=phase)
+                               q=q, status=status, phase=phase, now_date=date.today())
 
     @app.route('/projects/<int:project_id>/add-member', methods=['POST'])
     def add_project_member(project_id):

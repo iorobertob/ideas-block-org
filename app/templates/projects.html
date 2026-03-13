@@ -59,8 +59,18 @@
 
 <div class="row g-3">
 {% for p in projects %}
+{% set sessions = p.sessions.all()|sort(attribute='session_date', reverse=True) %}
+{% set last_session = sessions[0] if sessions else none %}
+{% set today = now_date %}
+{% if last_session %}
+  {% set days_ago = (today - last_session.session_date).days %}
+  {% if days_ago <= 14 %}{% set doc_health = 'good' %}{% set doc_color = '#5c7c5c' %}
+  {% elif days_ago <= 30 %}{% set doc_health = 'ok' %}{% set doc_color = '#ffc107' %}
+  {% else %}{% set doc_health = 'stale' %}{% set doc_color = '#dc3545' %}
+  {% endif %}
+{% else %}{% set doc_health = 'none' %}{% set doc_color = '#aaa' %}{% endif %}
 <div class="col-md-6 col-xl-4">
-  <div class="card h-100">
+  <div class="card h-100" style="border-left: 3px solid {{ doc_color }}">
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-start mb-2">
         <h5 class="mb-0"><a href="{{ url_for('record_detail', kind='projects', record_id=p.id) }}" class="primary-link">{{ p.title }}</a></h5>
@@ -77,13 +87,20 @@
       {% if p.budget_allocation %}
       <div class="small-muted">Budget: €{{ '%.0f'|format(p.budget_allocation) }}</div>
       {% endif %}
+      <div class="small-muted mt-1" title="Documentation health: {{ doc_health }}">
+        {% if last_session %}
+          <span style="color:{{ doc_color }}">● </span>Last session {{ last_session.session_date }}
+        {% else %}
+          <span style="color:#aaa">● </span>No sessions logged
+        {% endif %}
+      </div>
     </div>
     <div class="card-footer bg-transparent py-2 d-flex justify-content-between align-items-center">
       <a href="{{ url_for('record_detail', kind='projects', record_id=p.id) }}" class="btn btn-sm btn-outline-secondary">Open</a>
       <span class="small-muted">
         {{ p.memberships.count() }} member{{ 's' if p.memberships.count() != 1 }}
-        · {{ p.milestones.count() }} milestone{{ 's' if p.milestones.count() != 1 }}
-        · {{ p.sessions.count() }} session{{ 's' if p.sessions.count() != 1 }}
+        · {{ p.milestones.count() }} ms
+        · {{ sessions|length }} session{{ 's' if sessions|length != 1 }}
       </span>
     </div>
   </div>
