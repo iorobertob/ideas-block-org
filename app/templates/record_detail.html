@@ -278,6 +278,56 @@
   </div>
 </div>
 
+<!-- Bookings + Events row -->
+{% if project_bookings or project_events %}
+<div class="row g-3 mt-1">
+  {% if project_bookings %}
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        Space bookings
+        <a href="{{ url_for('booking_calendar') }}" class="small-muted">calendar →</a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <tr><th>Date</th><th>Space</th><th>Type</th></tr>
+          {% for b in project_bookings %}
+          <tr>
+            <td class="small-muted text-nowrap">{{ b.start_dt.strftime('%Y-%m-%d') }}</td>
+            <td><a href="{{ url_for('record_detail', kind='bookings', record_id=b.id) }}" class="primary-link">{{ b.space }}</a></td>
+            <td class="small-muted">{{ b.booking_type }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if project_events %}
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        Dissemination events
+        <a href="{{ url_for('events') }}" class="small-muted">all events →</a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <tr><th>Date</th><th>Event</th><th>Format</th></tr>
+          {% for e in project_events %}
+          <tr>
+            <td class="small-muted text-nowrap">{{ e.event_date }}</td>
+            <td><a href="{{ url_for('record_detail', kind='events', record_id=e.id) }}" class="primary-link">{{ e.title[:40] }}{% if e.title|length > 40 %}…{% endif %}</a></td>
+            <td class="small-muted">{{ e.format }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
 <!-- Research Journal -->
 <div class="card mt-3">
   <div class="card-header d-flex justify-content-between align-items-center">
