@@ -798,10 +798,14 @@ def register_routes(app):
         if category:
             query = query.filter_by(category=category)
         categories = [r[0] for r in db.session.query(Equipment.category).distinct().order_by(Equipment.category).all()]
+        all_equipment = Equipment.query.all()
+        transfer_total = len(all_equipment)
+        transfer_done = sum(1 for e in all_equipment if e.transfer_plan and e.transfer_plan.strip())
         return render_template('equipment.html',
                                equipment=query.order_by(Equipment.category, Equipment.name).all(),
                                categories=categories, q=q, status=status, category=category,
-                               facilities=Facility.query.order_by(Facility.name).all())
+                               facilities=Facility.query.order_by(Facility.name).all(),
+                               transfer_total=transfer_total, transfer_done=transfer_done)
 
     # ── Facilities ──
 

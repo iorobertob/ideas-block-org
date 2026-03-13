@@ -39,6 +39,28 @@
 </div></div>
 </div>
 
+<!-- Transfer plan coverage -->
+{% if transfer_total > 0 %}
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <div class="d-flex justify-content-between align-items-center mb-1">
+      <span class="small fw-semibold">Transfer plan coverage</span>
+      <span class="small-muted">{{ transfer_done }}/{{ transfer_total }} items ({{ (transfer_done/transfer_total*100)|round|int }}%)</span>
+    </div>
+    <div class="progress" style="height:8px;background:#e9ecef;border-radius:3px">
+      <div class="progress-bar" style="width:{{ (transfer_done/transfer_total*100)|round|int }}%;background:{% if transfer_done == transfer_total %}#5c7c5c{% elif transfer_done > transfer_total * 0.6 %}#ffc107{% else %}#dc3545{% endif %};border-radius:3px"></div>
+    </div>
+    {% if transfer_done < transfer_total %}
+    <div class="small-muted mt-1">{{ transfer_total - transfer_done }} item{{ 's' if (transfer_total - transfer_done) != 1 }} still need a transfer plan.
+      <a href="{{ url_for('legacy') }}?category=equipment" class="small-muted">See legacy tasks →</a>
+    </div>
+    {% else %}
+    <div class="small-muted mt-1 text-success">All items have transfer plans documented.</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
 <!-- Filter -->
 <form method="get" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
   <input class="form-control form-control-sm" style="max-width:200px" name="q" value="{{ q }}" placeholder="Search name, owner…">
@@ -75,8 +97,12 @@
       </thead>
       <tbody>
         {% for e in equipment %}
-        <tr>
-          <td><a class="primary-link" href="{{ url_for('record_detail', kind='equipment', record_id=e.id) }}">{{ e.name }}</a></td>
+        {% set no_plan = not e.transfer_plan or not e.transfer_plan.strip() %}
+        <tr {% if no_plan and not q and not status and not category %}class="table-warning"{% endif %}>
+          <td>
+            <a class="primary-link" href="{{ url_for('record_detail', kind='equipment', record_id=e.id) }}">{{ e.name }}</a>
+            {% if no_plan %}<span class="ms-1 small text-warning fw-semibold" title="No transfer plan">!</span>{% endif %}
+          </td>
           <td><span class="agenda-pill">{{ e.category }}</span></td>
           <td><span class="status-badge status-{{ e.status }}">{{ e.status }}</span></td>
           <td class="small-muted">{% if e.portable %}<span class="text-success">✓</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
