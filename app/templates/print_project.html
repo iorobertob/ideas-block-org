@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Project: {{ p.title }} — Kompresorinė</title>
+  <style>
+    body { font-family: 'Georgia', serif; max-width: 740px; margin: 40px auto; color: #1a1a1a; font-size: 11pt; line-height: 1.6; }
+    h1 { font-size: 18pt; margin-bottom: 0.2em; }
+    h2 { font-size: 13pt; margin-top: 1.5em; margin-bottom: 0.3em; border-bottom: 1px solid #ccc; padding-bottom: 0.2em; }
+    h3 { font-size: 11pt; font-style: italic; margin-bottom: 0.3em; }
+    .meta { color: #555; font-size: 10pt; margin-bottom: 1.5em; }
+    .meta span { margin-right: 1.5em; }
+    .session { margin-bottom: 1.2em; padding-left: 1em; border-left: 3px solid #5c7c5c; }
+    .session-meta { font-size: 9.5pt; color: #555; margin-bottom: 0.2em; }
+    .field-label { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.05em; color: #888; margin-bottom: 0.1em; }
+    .milestone-row { display: flex; justify-content: space-between; padding: 0.2em 0; border-bottom: 1px dotted #ddd; font-size: 10pt; }
+    .milestone-status { font-size: 9pt; color: #555; }
+    .member-row { display: flex; justify-content: space-between; font-size: 10pt; border-bottom: 1px dotted #ddd; padding: 0.2em 0; }
+    .footer { margin-top: 3em; font-size: 9pt; color: #999; border-top: 1px solid #ddd; padding-top: 0.5em; }
+    @media print {
+      body { margin: 20px; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="no-print" style="margin-bottom:2em">
+  <button onclick="window.print()" style="padding:0.4em 1em;cursor:pointer">Print / Save as PDF</button>
+  <a href="javascript:history.back()" style="margin-left:1em;font-size:10pt">← Back</a>
+</div>
+
+<p style="font-size:10pt;color:#888;margin:0">Kompresorinė Artistic Research Satellite — Research Project</p>
+<h1>{{ p.title }}</h1>
+<div class="meta">
+  <span>Lead: {{ p.lead }}</span>
+  <span>Phase: {{ p.phase }}</span>
+  <span>Status: {{ p.status }}</span>
+  {% if p.start_date %}<span>{{ p.start_date }}{% if p.end_date %} – {{ p.end_date }}{% endif %}</span>{% endif %}
+  {% if p.budget_allocation %}<span>Budget: €{{ '%.0f'|format(p.budget_allocation) }}</span>{% endif %}
+</div>
+
+{% if p.research_question %}
+<h2>Research Question</h2>
+<p>{{ p.research_question }}</p>
+{% endif %}
+
+{% if p.methods %}
+<h2>Methods</h2>
+<p style="white-space:pre-wrap">{{ p.methods }}</p>
+{% endif %}
+
+{% if p.outputs %}
+<h2>Expected Outputs</h2>
+<p style="white-space:pre-wrap">{{ p.outputs }}</p>
+{% endif %}
+
+{% if members %}
+<h2>Project Team</h2>
+{% for m in members %}
+<div class="member-row">
+  <span>{{ m.user.name if m.user else '?' }}</span>
+  <span class="milestone-status">{{ m.role }}</span>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if milestones %}
+<h2>Milestones</h2>
+{% for ms in milestones %}
+<div class="milestone-row">
+  <span>{{ ms.title }}</span>
+  <span class="milestone-status">{{ ms.target_date or '—' }} · {{ ms.status }}</span>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if sessions %}
+<h2>Research Journal ({{ sessions|length }} session{{ 's' if sessions|length != 1 }})</h2>
+{% for s in sessions %}
+<div class="session">
+  <div class="session-meta">
+    <strong>{{ s.session_date }}</strong> · {{ s.facilitator }}{% if s.participants %} · {{ s.participants }}{% endif %}
+  </div>
+  {% if s.methods_used %}
+  <div class="field-label">Methods</div>
+  <p style="margin:0 0 0.4em">{{ s.methods_used }}</p>
+  {% endif %}
+  {% if s.observations %}
+  <div class="field-label">Observations</div>
+  <p style="margin:0 0 0.4em">{{ s.observations }}</p>
+  {% endif %}
+  {% if s.open_questions %}
+  <div class="field-label">Open questions</div>
+  <p style="margin:0;font-style:italic">{{ s.open_questions }}</p>
+  {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="footer">
+  Generated {{ today }} · Kompresorinė Platform · Research project record.
+</div>
+</body>
+</html>

@@ -5,7 +5,14 @@
     <h1>{{ config.summary(obj) if config.summary else config.singular }}</h1>
     <div class="small-muted">{{ config.singular }} · ID {{ obj.id }}</div>
   </div>
-  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for(config.list_endpoint) }}">← {{ config.title }}</a>
+  <div class="d-flex gap-2">
+    {% if kind == 'governance' %}
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('print_meeting', record_id=obj.id) }}" target="_blank">⎙ Print</a>
+    {% elif kind == 'projects' %}
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('print_project', record_id=obj.id) }}" target="_blank">⎙ Print</a>
+    {% endif %}
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for(config.list_endpoint) }}">← {{ config.title }}</a>
+  </div>
 </div>
 
 <div class="row g-3">

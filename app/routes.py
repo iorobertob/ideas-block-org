@@ -523,6 +523,20 @@ def create_record(kind):
         if conflict:
             flash(f'Conflict detected with booking #{conflict.id} in {obj.space}.', 'danger')
             return False
+        # Protocol enforcement: research-first scheduling
+        if obj.start_dt:
+            weekday = obj.start_dt.weekday()  # 0=Mon, 6=Sun
+            hour = obj.start_dt.hour
+            research_types = {'research session', 'residency', 'rehearsal', 'workshop', 'studio session', 'experiment', 'practice'}
+            booking_type_lower = (obj.booking_type or '').lower()
+            is_research = any(rt in booking_type_lower for rt in research_types)
+            if weekday < 5 and 9 <= hour < 17 and not is_research:
+                flash(
+                    f'Protocol notice: "{obj.booking_type}" is scheduled during protected research hours (weekday 9–17). '
+                    'Per the Research-First Scheduling Protocol, weekday daytime blocks are reserved for research activities. '
+                    'Booking created — please document the reason in the notes.',
+                    'warning'
+                )
     db.session.add(obj)
     db.session.flush()
     _add_audit_log(kind, obj.id, 'create')
@@ -1498,6 +1512,30 @@ def register_routes(app):
         db.session.commit()
         flash(f'"{task.title}" marked as {new_status}.', 'success')
         return redirect(url_for('legacy'))
+
+    # ── Print views ──
+
+    @app.route('/records/governance/<int:record_id>/print')
+    def print_meeting(record_id):
+        if not login_required():
+            return redirect(url_for('login'))
+        m = db.session.get(Meeting, record_id)
+        if not m:
+            abort(404)
+        proposals = ProposalRecord.query.filter_by(meeting_id=m.id).order_by(ProposalRecord.id).all()
+        return render_template('print_meeting.html', m=m, proposals=proposals, today=date.today())
+
+    @app.route('/records/projects/<int:record_id>/print')
+    def print_project(record_id):
+        if not login_required():
+            return redirect(url_for('login'))
+        p = db.session.get(ResearchProject, record_id)
+        if not p:
+            abort(404)
+        sessions = ResearchSession.query.filter_by(project_id=p.id).order_by(ResearchSession.session_date.desc()).all()
+        milestones = Milestone.query.filter_by(project_id=p.id).order_by(Milestone.target_date).all()
+        members = ProjectMembership.query.filter_by(project_id=p.id).all()
+        return render_template('print_project.html', p=p, sessions=sessions, milestones=milestones, members=members, today=date.today())
 
     # ── Global Search ──
 
