@@ -10,6 +10,8 @@
     <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('print_meeting', record_id=obj.id) }}" target="_blank">⎙ Print</a>
     {% elif kind == 'projects' %}
     <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('print_project', record_id=obj.id) }}" target="_blank">⎙ Print</a>
+    {% elif kind == 'reports' %}
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('print_report', record_id=obj.id) }}" target="_blank">⎙ Print</a>
     {% endif %}
     <a class="btn btn-outline-secondary btn-sm" href="{{ url_for(config.list_endpoint) }}">← {{ config.title }}</a>
   </div>
@@ -28,6 +30,8 @@
             <dd>
               {% if item.field.type == 'url' and item.display %}
                 <a href="{{ item.display }}" target="_blank" rel="noopener" style="font-size:0.87rem">{{ item.display[:60] }}{% if item.display|length > 60 %}…{% endif %}</a>
+              {% elif item.field.type == 'textarea' and item.display %}
+                <span style="white-space:pre-wrap;font-size:0.87rem">{{ item.display }}</span>
               {% else %}
                 {{ item.display if item.display not in [None, ''] else '—' }}
               {% endif %}

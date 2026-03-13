@@ -1831,6 +1831,16 @@ def register_routes(app):
         members = ProjectMembership.query.filter_by(project_id=p.id).all()
         return render_template('print_project.html', p=p, sessions=sessions, milestones=milestones, members=members, today=date.today())
 
+    @app.route('/records/reports/<int:record_id>/print')
+    def print_report(record_id):
+        if not login_required():
+            return redirect(url_for('login'))
+        report = db.session.get(MonthlyReport, record_id)
+        if not report:
+            abort(404)
+        creator = db.session.get(User, report.created_by_id) if report.created_by_id else None
+        return render_template('print_report.html', report=report, creator=creator)
+
     # ── Global Search ──
 
     @app.route('/search')
