@@ -17,11 +17,22 @@
         <span class="status-badge status-{{ poll.status }}">{{ poll.status }}</span>
       </div>
       {% if poll.description %}<p class="small mb-2">{{ poll.description[:120] }}{% if poll.description|length > 120 %}…{% endif %}</p>{% endif %}
+      {% set vote_count = poll.votes.count() %}
+      {% set opt_count = poll.options.count() %}
       <div class="small-muted d-flex gap-3 flex-wrap">
         <span>{{ poll.poll_type }} choice</span>
-        {% if poll.is_public %}<span class="text-success">🔗 public link</span>{% endif %}
+        {% if poll.is_public %}<span class="text-success">🔗 public</span>{% endif %}
         {% if poll.deadline %}<span>⏱ {{ poll.deadline.strftime('%Y-%m-%d') }}</span>{% endif %}
-        <span>{{ poll.votes.count() }} vote{{ 's' if poll.votes.count() != 1 }}</span>
+      </div>
+      <div class="mt-2">
+        {% if vote_count > 0 and opt_count > 0 %}
+        <div class="small-muted mb-1">{{ vote_count }} vote{{ 's' if vote_count != 1 }} across {{ opt_count }} option{{ 's' if opt_count != 1 }}</div>
+        <div class="progress" style="height:6px;background:#e9ecef;border-radius:3px">
+          <div class="progress-bar" style="width:{{ [100, vote_count * 20]|min }}%;background:#5c7c5c;border-radius:3px"></div>
+        </div>
+        {% else %}
+        <div class="small-muted">No votes yet · {{ opt_count }} option{{ 's' if opt_count != 1 }}</div>
+        {% endif %}
       </div>
     </div>
     <div class="card-footer bg-transparent py-2">

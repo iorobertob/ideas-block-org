@@ -53,6 +53,7 @@
           <th>Meeting</th>
           <th class="hide-mobile">Type</th>
           <th class="hide-mobile">Working Group</th>
+          <th class="hide-mobile">Proposals</th>
           <th class="hide-mobile">Decisions</th>
         </tr>
       </thead>
@@ -63,7 +64,14 @@
           <td><a class="primary-link" href="{{ url_for('record_detail', kind='governance', record_id=m.id) }}">{{ m.title }}</a></td>
           <td class="hide-mobile"><span class="agenda-pill">{{ m.meeting_type }}</span></td>
           <td class="hide-mobile small-muted">{% if m.working_group %}{{ m.working_group.name }}{% else %}—{% endif %}</td>
-          <td class="hide-mobile small" style="max-width:280px">{{ (m.decisions or '')[:100] }}{% if m.decisions and m.decisions|length > 100 %}…{% endif %}</td>
+          <td class="hide-mobile small-muted">
+            {% set props = m.proposals.all() %}
+            {% if props %}
+              {{ props|length }} proposal{{ 's' if props|length != 1 }}
+              ({{ props|selectattr('outcome','equalto','approved')|list|length }} approved)
+            {% else %}—{% endif %}
+          </td>
+          <td class="hide-mobile small" style="max-width:200px">{{ (m.decisions or '')[:80] }}{% if m.decisions and m.decisions|length > 80 %}…{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>

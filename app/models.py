@@ -120,6 +120,7 @@ class Meeting(OwnershipMixin, db.Model):
     meeting_type = db.Column(db.String(80), default='steering')
     working_group_id = db.Column(db.Integer, db.ForeignKey('working_group.id'), nullable=True)
     working_group = db.relationship('WorkingGroup')
+    proposals = db.relationship('ProposalRecord', lazy='dynamic', foreign_keys='ProposalRecord.meeting_id')
 
 
 class PolicyDocument(OwnershipMixin, db.Model):
@@ -215,7 +216,7 @@ class ProposalRecord(db.Model):
     votes_against = db.Column(db.Integer, default=0)
     dissenting_notes = db.Column(db.Text, default='')
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    meeting = db.relationship('Meeting')
+    meeting = db.relationship('Meeting', overlaps='proposals')
 
 
 class Attachment(db.Model):
