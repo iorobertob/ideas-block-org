@@ -1,32 +1,103 @@
 {% extends 'base.html' %}{% block content %}
-<div class='row g-4'><div class='col-lg-4'><div class='card'><div class='card-body'><h3>New research project</h3><form method='post'>
-<input class='form-control mb-2' name='title' placeholder='Title' required>
-<input class='form-control mb-2' name='lead' placeholder='Lead' value='{{ current_user.name }}' required>
-<div class='row g-2 mb-2'><div class='col'><select class='form-select' name='phase'><option value='phase_i'>Phase I</option><option value='phase_ii'>Phase II</option><option value='pilot'>Pilot</option></select></div><div class='col'><select class='form-select' name='status'><option>active</option><option>planned</option><option>completed</option></select></div></div>
-<textarea class='form-control mb-2' name='research_question' placeholder='Research question' required></textarea>
-<textarea class='form-control mb-2' name='methods' placeholder='Methods'></textarea>
-<textarea class='form-control mb-2' name='outputs' placeholder='Expected outputs'></textarea>
-<div class='row g-2 mb-2'><div class='col'><input type='date' class='form-control' name='start_date'></div><div class='col'><input type='date' class='form-control' name='end_date'></div></div>
-<button class='btn btn-dark'>Save project</button></form></div></div></div>
-<div class='col-lg-8'><div class='card'><div class='card-body'><h3>Research projects</h3>
-<form method='get' class='d-flex gap-2 mb-3 flex-wrap'>
-  <input class='form-control form-control-sm' style='max-width:220px' name='q' value='{{ q }}' placeholder='Search title, lead, question…'>
-  <select class='form-select form-select-sm' style='max-width:140px' name='status'>
-    <option value=''>All statuses</option>
-    <option value='active' {% if status=='active' %}selected{% endif %}>Active</option>
-    <option value='planned' {% if status=='planned' %}selected{% endif %}>Planned</option>
-    <option value='completed' {% if status=='completed' %}selected{% endif %}>Completed</option>
-  </select>
-  <select class='form-select form-select-sm' style='max-width:130px' name='phase'>
-    <option value=''>All phases</option>
-    <option value='phase_i' {% if phase=='phase_i' %}selected{% endif %}>Phase I</option>
-    <option value='phase_ii' {% if phase=='phase_ii' %}selected{% endif %}>Phase II</option>
-    <option value='pilot' {% if phase=='pilot' %}selected{% endif %}>Pilot</option>
-  </select>
-  <button class='btn btn-sm btn-outline-secondary'>Filter</button>
-  {% if q or status or phase %}<a class='btn btn-sm btn-outline-secondary' href='{{ url_for("projects") }}'>Clear</a>{% endif %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>Research Projects</h1>
+    <div class="small-muted">Practice-led inquiry, residencies, and research laboratories</div>
+  </div>
+  <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newProjectForm">+ New project</button>
+</div>
+
+<div class="collapse mb-3" id="newProjectForm">
+<div class="card"><div class="card-body">
+<h5 class="mb-3">New research project</h5>
+<form method="post" class="row g-2">
+  <div class="col-md-5"><input class="form-control form-control-sm" name="title" placeholder="Project title" required></div>
+  <div class="col-md-3"><input class="form-control form-control-sm" name="lead" placeholder="Lead researcher" value="{{ current_user.name }}" required></div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="phase">
+      <option value="phase_i">Phase I</option>
+      <option value="phase_ii">Phase II</option>
+      <option value="pilot">Pilot</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="status">
+      <option value="active">active</option>
+      <option value="planned">planned</option>
+      <option value="completed">completed</option>
+    </select>
+  </div>
+  <div class="col-12"><textarea class="form-control form-control-sm" name="research_question" placeholder="Research question" required style="min-height:60px"></textarea></div>
+  <div class="col-md-6"><textarea class="form-control form-control-sm" name="methods" placeholder="Methods" style="min-height:55px"></textarea></div>
+  <div class="col-md-6"><textarea class="form-control form-control-sm" name="outputs" placeholder="Expected outputs" style="min-height:55px"></textarea></div>
+  <div class="col-md-3"><input type="date" class="form-control form-control-sm" name="start_date" placeholder="Start date"></div>
+  <div class="col-md-3"><input type="date" class="form-control form-control-sm" name="end_date" placeholder="End date"></div>
+  <div class="col-md-3"><input type="number" class="form-control form-control-sm" name="budget_allocation" placeholder="Budget allocation (€)" step="0.01"></div>
+  <div class="col-md-3 d-flex align-items-end"><button class="btn btn-dark btn-sm w-100">Create project</button></div>
 </form>
-<table class='table table-striped linked-row'><tr><th>Title</th><th>Lead</th><th>Phase</th><th>Status</th></tr>
-{% for p in projects %}<tr><td><a class='primary-link' href='{{ url_for("record_detail", kind="projects", record_id=p.id) }}'>{{ p.title }}</a><div class='small-muted'>{{ p.research_question[:110] }}{% if p.research_question|length > 110 %}...{% endif %}</div></td><td>{{ p.lead }}</td><td>{{ p.phase }}</td><td>{{ p.status }}</td></tr>
-{% else %}<tr><td colspan='4'>No projects found.</td></tr>{% endfor %}
-</table></div></div></div></div>{% endblock %}
+</div></div>
+</div>
+
+<!-- Filter bar -->
+<form method="get" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+  <input class="form-control form-control-sm" style="max-width:220px" name="q" value="{{ q }}" placeholder="Search title, lead, question…">
+  <select class="form-select form-select-sm" style="max-width:140px" name="status">
+    <option value="">All statuses</option>
+    <option value="active" {% if status=='active' %}selected{% endif %}>Active</option>
+    <option value="planned" {% if status=='planned' %}selected{% endif %}>Planned</option>
+    <option value="completed" {% if status=='completed' %}selected{% endif %}>Completed</option>
+  </select>
+  <select class="form-select form-select-sm" style="max-width:130px" name="phase">
+    <option value="">All phases</option>
+    <option value="phase_i" {% if phase=='phase_i' %}selected{% endif %}>Phase I</option>
+    <option value="phase_ii" {% if phase=='phase_ii' %}selected{% endif %}>Phase II</option>
+    <option value="pilot" {% if phase=='pilot' %}selected{% endif %}>Pilot</option>
+  </select>
+  <button class="btn btn-sm btn-outline-secondary">Filter</button>
+  {% if q or status or phase %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('projects') }}">Clear</a>{% endif %}
+</form>
+
+<div class="row g-3">
+{% for p in projects %}
+<div class="col-md-6 col-xl-4">
+  <div class="card h-100">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <h5 class="mb-0"><a href="{{ url_for('record_detail', kind='projects', record_id=p.id) }}" class="primary-link">{{ p.title }}</a></h5>
+        <span class="status-badge status-{{ p.status }} ms-1">{{ p.status }}</span>
+      </div>
+      <div class="small-muted d-flex gap-2 flex-wrap mb-2">
+        <span class="agenda-pill {% if p.phase == 'phase_i' %}badge-phase-i{% elif p.phase == 'phase_ii' %}badge-phase-ii{% else %}badge-pilot{% endif %}">{{ p.phase }}</span>
+        <span>{{ p.lead }}</span>
+        {% if p.start_date %}<span>from {{ p.start_date }}</span>{% endif %}
+      </div>
+      {% if p.research_question %}
+      <p class="small mb-2" style="color:#444">{{ p.research_question[:140] }}{% if p.research_question|length > 140 %}…{% endif %}</p>
+      {% endif %}
+      {% if p.budget_allocation %}
+      <div class="small-muted">Budget: €{{ '%.0f'|format(p.budget_allocation) }}</div>
+      {% endif %}
+    </div>
+    <div class="card-footer bg-transparent py-2 d-flex justify-content-between align-items-center">
+      <a href="{{ url_for('record_detail', kind='projects', record_id=p.id) }}" class="btn btn-sm btn-outline-secondary">Open</a>
+      <span class="small-muted">
+        {{ p.memberships.count() }} member{{ 's' if p.memberships.count() != 1 }}
+        · {{ p.milestones.count() }} milestone{{ 's' if p.milestones.count() != 1 }}
+      </span>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="col-12">
+  <div class="card"><div class="card-body small-muted">
+    No projects found.
+    {% if q or status or phase %}
+    <a href="{{ url_for('projects') }}">Clear filters</a>
+    {% else %}
+    <a href="#" data-bs-toggle="collapse" data-bs-target="#newProjectForm">Create the first project.</a>
+    {% endif %}
+  </div></div>
+</div>
+{% endfor %}
+</div>
+{% endblock %}

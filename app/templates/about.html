@@ -1,14 +1,131 @@
-{% extends 'base.html' %}
-{% block content %}
-<div class="card"><div class="card-body">
-<h2>About this platform</h2>
-<p>This governance platform operationalizes the Ideas Block – Kompresorinė and LMTA artistic research satellite model. It translates the proposal into a working management system for governance, research scheduling, budgeting, partnership development, risk control, public dissemination, protocol implementation, and Phase II transfer planning.</p>
-<ul>
-<li><strong>Governance:</strong> steering group records, policies, user roles, monthly reports.</li>
-<li><strong>Research infrastructure:</strong> projects, bookings, dissemination, documentation-minded workflow.</li>
-<li><strong>Financial and technical continuity:</strong> budget ledger, portable equipment inventory, transfer planning.</li>
-<li><strong>Phase II:</strong> successor-site roadmap, national network building, partnership requests.</li>
-<li><strong>Protocol:</strong> codified Kompresorinė operational rules that can migrate to future spaces.</li>
-</ul>
-</div></div>
+{% extends 'base.html' %}{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>About</h1>
+    <div class="small-muted">Kompresorinė Artistic Research Satellite · 2026–2029</div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Left: Manifesto -->
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header">Concept &amp; Purpose</div>
+      <div class="card-body">
+        <p>This platform operationalizes the collaboration between <strong>LMTA Mokslo centras</strong> and <strong>Ideas Block – Kompresorinė</strong>: a temporary artistic research satellite operating for a three-year pilot period (2026–2029).</p>
+        <p>Rather than investing in permanent building infrastructure, the project prioritizes portable technical equipment, operational systems for artistic research, documentation and archiving, research coordination, and a <strong>transferable infrastructure model</strong>.</p>
+        <p>Although the Kompresorinė building is expected to be demolished within approximately three years, the infrastructure created during the pilot remains portable and transferable to a future site.</p>
+        <div class="alert alert-light border py-2 px-3 mb-0" style="font-style:italic;font-size:0.9rem">
+          "Although the building itself is temporary, the systems, knowledge, equipment, and partnerships developed through the project will continue beyond its demolition, forming the basis for future artistic research platforms."
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">Program Model</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="section-title">Research Infrastructure Layer</div>
+            <ul class="list-unstyled small">
+              <li class="py-1 border-bottom">Research residencies</li>
+              <li class="py-1 border-bottom">Practice-based experimentation</li>
+              <li class="py-1 border-bottom">Rehearsal-as-research laboratories</li>
+              <li class="py-1 border-bottom">Sonic and spatial testing</li>
+              <li class="py-1 border-bottom">Peer review and reflection</li>
+              <li class="py-1">Documentation and archiving</li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <div class="section-title">Public Dissemination Layer</div>
+            <ul class="list-unstyled small">
+              <li class="py-1 border-bottom">Lecture-performances</li>
+              <li class="py-1 border-bottom">Research demonstrations</li>
+              <li class="py-1 border-bottom">Open rehearsals</li>
+              <li class="py-1 border-bottom">Public discussion formats</li>
+              <li class="py-1">Research presentations and festivals</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Phase II: Post-Kompresorinė (2029+)</div>
+      <div class="card-body">
+        <p class="small mb-2">By the end of the pilot phase, the project aims to produce a tested operational model, portable technical infrastructure, documentation systems, and a community of artist-researchers.</p>
+        <div class="section-title">Possible Phase II Paths</div>
+        <ul class="small mb-0">
+          <li class="mb-1">Permanent artistic research laboratory affiliated with LMTA</li>
+          <li class="mb-1">Hybrid university–independent research platform</li>
+          <li>National artistic research infrastructure supporting multiple Lithuanian institutions</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Protocol + Quick links -->
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        The Kompresorinė Protocol
+        <a href="{{ url_for('protocol') }}" class="small-muted">manage →</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% set principles = [
+            ('Spatial Flexibility', 'Spaces shift between rehearsal, lab, seminar, and presentation modes.'),
+            ('Research-First Scheduling', 'Time allocation prioritizes research processes over event logic.'),
+            ('Documentation Culture', 'Research activities are documented through video, audio, and written reflection.'),
+            ('Public Research Interface', 'Public activities function as dissemination of research.'),
+            ('Portable Infrastructure', 'Equipment systems remain transferable to future sites.'),
+            ('Governance Transparency', 'Clear decision-making and reporting structures.'),
+          ] %}
+          {% for name, desc in principles %}
+          <li class="list-group-item py-2 px-3">
+            <div class="fw-semibold small">{{ name }}</div>
+            <div class="small-muted" style="font-size:0.8rem">{{ desc }}</div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">Platform Modules</div>
+      <div class="card-body p-0">
+        {% set modules = [
+          ('Research', [('Projects', 'projects'), ('Bookings', 'bookings'), ('Tasks', 'tasks')]),
+          ('Program', [('Events', 'events'), ('Polls', 'polls')]),
+          ('Operations', [('Facilities', 'facilities'), ('Equipment', 'equipment'), ('Budget', 'budget')]),
+          ('Governance', [('Meetings', 'governance'), ('Working Groups', 'working_groups'), ('Risks', 'risks'), ('Roadmap', 'roadmap')]),
+          ('Foundational', [('Constitution', 'constitution'), ('Protocol', 'protocol'), ('Policies', 'policies')]),
+          ('Community', [('Partnerships', 'partnerships'), ('Users', 'users')]),
+        ] %}
+        {% for group, items in modules %}
+        <div class="px-3 pt-2 pb-1">
+          <div class="section-title mb-1">{{ group }}</div>
+          <div class="d-flex gap-2 flex-wrap mb-1">
+            {% for label, endpoint in items %}
+            <a href="{{ url_for(endpoint) }}" class="btn btn-sm btn-outline-secondary" style="font-size:0.76rem">{{ label }}</a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Platform version</div>
+      <div class="card-body small">
+        <dl class="kv mb-0">
+          <dt>Phase</dt><dd>Phase I (2026–2028)</dd>
+          <dt>Stack</dt><dd>Flask · SQLite · Bootstrap 5</dd>
+          <dt>Deployment</dt><dd>Local / single-instance pilot</dd>
+          <dt>Phase II architecture</dt><dd>Federated multi-instance (planned)</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

@@ -44,6 +44,8 @@
     .status-blocked, .status-missed { background: #f8d7da; color: #721c24; }
     .status-closed, .status-archived { background: #e2e3e5; color: #383d41; }
     .status-monitoring { background: #ffeeba; color: #856404; }
+    .status-todo { background: #f8f9fa; color: #495057; }
+    .status-in_progress { background: #cff4fc; color: #055160; }
     .priority-urgent { background: #f8d7da; color: #721c24; }
     .priority-high { background: #fce8d8; color: #7a3c00; }
     .priority-normal { background: #e2e3e5; color: #383d41; }
@@ -132,6 +134,12 @@
             <li><a class="dropdown-item" href="{{ url_for('audit') }}">Audit Log</a></li>
             {% endif %}
           </ul>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('index') }}" style="font-size:0.78rem">⌂</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('about') }}" style="font-size:0.78rem">About</a>
         </li>
         <li class="nav-item">
           <span class="nav-link text-muted" style="font-size:0.78rem">{{ current_user.name }}</span>
