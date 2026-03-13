@@ -145,6 +145,7 @@ CREATE TABLE IF NOT EXISTS research_project (
     budget_allocation FLOAT DEFAULT 0.0,
     created_by_id INTEGER REFERENCES user(id)
 );"
+add_column "research_project" "domain"           "VARCHAR(30) NOT NULL DEFAULT 'research'"
 add_column "research_project" "methods"          "TEXT DEFAULT ''"
 add_column "research_project" "outputs"          "TEXT DEFAULT ''"
 add_column "research_project" "start_date"       "DATE"
@@ -550,6 +551,7 @@ CREATE TABLE IF NOT EXISTS task (
 add_column "task" "description"    "TEXT DEFAULT ''"
 add_column "task" "status"         "VARCHAR(30) DEFAULT 'todo'"
 add_column "task" "priority"       "VARCHAR(20) DEFAULT 'normal'"
+add_column "task" "domain"         "VARCHAR(30)"
 add_column "task" "due_date"       "DATE"
 add_column "task" "assigned_to_id" "INTEGER REFERENCES user(id)"
 add_column "task" "entity_type"    "VARCHAR(50)"

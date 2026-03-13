@@ -174,10 +174,11 @@ RECORD_CONFIG = {
         'fields': [
             {'name': 'title', 'label': 'Title'},
             {'name': 'lead', 'label': 'Lead'},
+            {'name': 'domain', 'label': 'Domain', 'type': 'select', 'choices': [('research', 'Research'), ('program', 'Program'), ('operations', 'Operations')]},
             {'name': 'phase', 'label': 'Phase', 'type': 'select', 'choices': [('phase_i', 'Phase I'), ('phase_ii', 'Phase II'), ('pilot', 'Pilot')]},
             {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('active', 'active'), ('planned', 'planned'), ('completed', 'completed')]},
-            {'name': 'research_question', 'label': 'Research question', 'type': 'textarea'},
-            {'name': 'methods', 'label': 'Methods', 'type': 'textarea'},
+            {'name': 'research_question', 'label': 'Research question / objective', 'type': 'textarea'},
+            {'name': 'methods', 'label': 'Methods / approach', 'type': 'textarea'},
             {'name': 'outputs', 'label': 'Outputs', 'type': 'textarea'},
             {'name': 'budget_allocation', 'label': 'Budget allocation (€)', 'type': 'float'},
             {'name': 'start_date', 'label': 'Start date', 'type': 'date'},
@@ -401,6 +402,7 @@ RECORD_CONFIG = {
         'fields': [
             {'name': 'title', 'label': 'Title'},
             {'name': 'description', 'label': 'Description', 'type': 'textarea'},
+            {'name': 'domain', 'label': 'Domain', 'type': 'select', 'choices': [('', '— unclassified —'), ('research', 'Research'), ('program', 'Program'), ('operations', 'Operations')]},
             {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('todo', 'To do'), ('in_progress', 'In progress'), ('done', 'Done'), ('blocked', 'Blocked')]},
             {'name': 'priority', 'label': 'Priority', 'type': 'select', 'choices': [('low', 'Low'), ('normal', 'Normal'), ('high', 'High'), ('urgent', 'Urgent')]},
             {'name': 'due_date', 'label': 'Due date', 'type': 'date'},
@@ -667,6 +669,7 @@ def register_routes(app):
         q = request.args.get('q', '').strip()
         status = request.args.get('status', '')
         phase = request.args.get('phase', '')
+        domain = request.args.get('domain', '')
         query = ResearchProject.query
         if q:
             query = query.filter(
@@ -678,9 +681,12 @@ def register_routes(app):
             query = query.filter_by(status=status)
         if phase:
             query = query.filter_by(phase=phase)
+        if domain:
+            query = query.filter_by(domain=domain)
         return render_template('projects.html',
                                projects=query.order_by(ResearchProject.start_date.desc()).all(),
-                               q=q, status=status, phase=phase, now_date=date.today())
+                               q=q, status=status, phase=phase, domain=domain,
+                               now_date=date.today())
 
     @app.route('/projects/<int:project_id>/add-member', methods=['POST'])
     def add_project_member(project_id):
@@ -1180,6 +1186,7 @@ def register_routes(app):
                 description=request.form.get('description', ''),
                 status=request.form.get('status', 'todo'),
                 priority=request.form.get('priority', 'normal'),
+                domain=request.form.get('domain') or None,
                 due_date=parse_date(request.form.get('due_date')),
                 assigned_to_id=int(request.form['assigned_to_id']) if request.form.get('assigned_to_id') else None,
                 entity_type=request.form.get('entity_type') or None,
@@ -1201,6 +1208,7 @@ def register_routes(app):
         assignee_f = request.args.get('assignee', '')
         priority_f = request.args.get('priority', '')
         entity_type_f = request.args.get('entity_type', '')
+        domain_f = request.args.get('domain', '')
         query = Task.query
         if q:
             query = query.filter(Task.title.ilike(f'%{q}%') | Task.description.ilike(f'%{q}%'))
@@ -1212,6 +1220,8 @@ def register_routes(app):
             query = query.filter_by(priority=priority_f)
         if entity_type_f:
             query = query.filter_by(entity_type=entity_type_f)
+        if domain_f:
+            query = query.filter_by(domain=domain_f)
         # Build entity lookup maps for display
         entity_maps = {
             'projects': {p.id: p.title for p in ResearchProject.query.all()},
@@ -1231,7 +1241,7 @@ def register_routes(app):
                                entity_maps=entity_maps,
                                q=q, status_f=status_f, assignee_f=assignee_f,
                                priority_f=priority_f, entity_type_f=entity_type_f,
-                               now=date.today())
+                               domain_f=domain_f, now=date.today())
 
     @app.route('/tasks/<int:task_id>/status', methods=['POST'])
     def update_task_status(task_id):

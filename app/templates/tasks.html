@@ -27,6 +27,14 @@
       <option value="urgent">Urgent</option>
     </select>
   </div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="domain">
+      <option value="">— domain —</option>
+      <option value="research">Research</option>
+      <option value="program">Program</option>
+      <option value="operations">Operations</option>
+    </select>
+  </div>
   <!-- Entity linking row -->
   <div class="col-md-3">
     <select class="form-select form-select-sm" name="entity_type" id="taskEntityType" onchange="updateEntitySelect()">
@@ -105,12 +113,18 @@ function updateEntitySelect() {
     <option value="governance" {% if entity_type_f=='governance' %}selected{% endif %}>Meetings</option>
     <option value="partnerships" {% if entity_type_f=='partnerships' %}selected{% endif %}>Partnerships</option>
   </select>
+  <select class="form-select form-select-sm" style="max-width:130px" name="domain">
+    <option value="">All domains</option>
+    <option value="research" {% if domain_f=='research' %}selected{% endif %}>Research</option>
+    <option value="program" {% if domain_f=='program' %}selected{% endif %}>Program</option>
+    <option value="operations" {% if domain_f=='operations' %}selected{% endif %}>Operations</option>
+  </select>
   <select class="form-select form-select-sm" style="max-width:160px" name="assignee">
     <option value="">All assignees</option>
     {% for u in users %}<option value="{{ u.id }}" {% if assignee_f==u.id|string %}selected{% endif %}>{{ u.name }}</option>{% endfor %}
   </select>
   <button class="btn btn-sm btn-outline-secondary">Filter</button>
-  {% if q or status_f or assignee_f or priority_f or entity_type_f %}
+  {% if q or status_f or assignee_f or priority_f or entity_type_f or domain_f %}
   <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('tasks') }}">Clear</a>
   {% endif %}
 </form>
@@ -123,6 +137,7 @@ function updateEntitySelect() {
 <table class="table table-sm mb-0 table-hover linked-row">
   <thead><tr>
     <th>Task</th>
+    <th class="hide-mobile">Domain</th>
     <th class="hide-mobile">Assignee</th>
     <th>Priority</th>
     <th>Status</th>
@@ -139,6 +154,12 @@ function updateEntitySelect() {
       <a href="{{ url_for('record_detail', kind='tasks', record_id=t.id) }}" class="primary-link">{{ t.title }}</a>
       {% if overdue %}<span class="ms-1 small text-danger fw-semibold">overdue</span>{% endif %}
       {% if t.description %}<div class="small-muted">{{ t.description[:70] }}{% if t.description|length > 70 %}…{% endif %}</div>{% endif %}
+    </td>
+    <td class="hide-mobile small-muted">
+      {% if t.domain %}
+        {% set ds = {'research': 'background:#e8f0e8;color:#3a5c3a', 'program': 'background:#e8eaf6;color:#3949ab', 'operations': 'background:#fff3e0;color:#bf6f00'} %}
+        <span class="agenda-pill" style="{{ ds.get(t.domain, '') }}">{{ t.domain }}</span>
+      {% else %}—{% endif %}
     </td>
     <td class="hide-mobile small-muted">{{ t.assignee.name if t.assignee else '—' }}</td>
     <td><span class="status-badge priority-{{ t.priority }}">{{ t.priority }}</span></td>
@@ -167,7 +188,7 @@ function updateEntitySelect() {
     </td>
   </tr>
   {% else %}
-  <tr><td colspan="8" class="text-center small-muted py-3">No tasks found.</td></tr>
+  <tr><td colspan="9" class="text-center small-muted py-3">No tasks found.</td></tr>
   {% endfor %}
   </tbody>
 </table>
