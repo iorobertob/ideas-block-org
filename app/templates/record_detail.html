@@ -71,6 +71,26 @@
 
 {# ─────────── PROJECT-SPECIFIC SECTIONS ─────────── #}
 {% if kind == 'projects' %}
+{% set today_d = now_date if now_date is defined else none %}
+{% if rs_sessions and today_d %}
+  {% set last_s = rs_sessions[0] %}
+  {% set gap_days = (today_d - last_s.session_date).days %}
+  {% if gap_days > 30 %}
+  <div class="alert alert-danger py-2 mt-3" style="font-size:0.86rem">
+    <strong>Documentation gap:</strong> Last session logged {{ gap_days }} days ago ({{ last_s.session_date }}).
+    Research documentation is stale. <a href="#newSessionForm" data-bs-toggle="collapse" data-bs-target="#newSessionForm" class="alert-link">Log a session →</a>
+  </div>
+  {% elif gap_days > 14 %}
+  <div class="alert alert-warning py-2 mt-3" style="font-size:0.86rem">
+    <strong>Documentation note:</strong> Last session logged {{ gap_days }} days ago. Consider logging a session to keep the record current.
+  </div>
+  {% endif %}
+{% elif not rs_sessions and obj.status == 'active' %}
+  <div class="alert alert-warning py-2 mt-3" style="font-size:0.86rem">
+    <strong>No sessions logged yet.</strong> Active projects should have at least one documented research session.
+    <a href="#newSessionForm" data-bs-toggle="collapse" data-bs-target="#newSessionForm" class="alert-link">Log the first session →</a>
+  </div>
+{% endif %}
 
 <!-- Project Team / Assignees -->
 <div class="row g-3 mt-1">
@@ -218,39 +238,56 @@
 
 <!-- Research Journal -->
 <div class="card mt-3">
-  <div class="card-header">Research Journal</div>
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Research Journal <span class="small-muted fw-normal">({{ rs_sessions|length }} session{{ 's' if rs_sessions|length != 1 }})</span></span>
+    <button class="btn btn-sm btn-outline-dark" data-bs-toggle="collapse" data-bs-target="#newSessionForm">+ Log session</button>
+  </div>
   <div class="card-body">
-    <form method="post" action="{{ url_for('sessions') }}" class="mb-3 pb-3 border-bottom">
+    <div class="collapse mb-3" id="newSessionForm">
+    <div class="border rounded p-3 bg-light mb-3">
+    <form method="post" action="{{ url_for('sessions') }}">
       <input type="hidden" name="project_id" value="{{ obj.id }}">
       <div class="row g-2 mb-2">
         <div class="col-md-3"><input type="date" class="form-control form-control-sm" name="session_date" required></div>
         <div class="col-md-3"><input class="form-control form-control-sm" name="facilitator" placeholder="Facilitator" value="{{ current_user.name }}" required></div>
-        <div class="col-md-6"><input class="form-control form-control-sm" name="participants" placeholder="Participants"></div>
+        <div class="col-md-6"><input class="form-control form-control-sm" name="participants" placeholder="Participants (comma-separated)"></div>
       </div>
       <div class="row g-2 mb-2">
-        <div class="col-md-4"><textarea class="form-control form-control-sm" name="methods_used" placeholder="Methods used" style="min-height:55px"></textarea></div>
-        <div class="col-md-4"><textarea class="form-control form-control-sm" name="observations" placeholder="Observations" style="min-height:55px"></textarea></div>
-        <div class="col-md-4"><textarea class="form-control form-control-sm" name="open_questions" placeholder="Open questions" style="min-height:55px"></textarea></div>
+        <div class="col-md-4"><textarea class="form-control form-control-sm" name="methods_used" placeholder="Methods used" style="min-height:65px"></textarea></div>
+        <div class="col-md-4"><textarea class="form-control form-control-sm" name="observations" placeholder="Observations" style="min-height:65px"></textarea></div>
+        <div class="col-md-4"><textarea class="form-control form-control-sm" name="open_questions" placeholder="Open questions" style="min-height:65px"></textarea></div>
       </div>
-      <button class="btn btn-sm btn-outline-dark">Log session</button>
+      <button class="btn btn-sm btn-dark">Log session</button>
     </form>
-    {% if rs_sessions %}
-    <div class="table-responsive">
-    <table class="table table-sm">
-      <tr><th>Date</th><th>Facilitator</th><th>Methods</th><th>Observations</th><th>Questions</th><th></th></tr>
-      {% for s in rs_sessions %}
-      <tr>
-        <td class="text-nowrap">{{ s.session_date }}</td>
-        <td>{{ s.facilitator }}</td>
-        <td class="small-muted">{{ s.methods_used[:60] }}{% if s.methods_used|length > 60 %}…{% endif %}</td>
-        <td>{{ s.observations[:100] }}{% if s.observations|length > 100 %}…{% endif %}</td>
-        <td class="small-muted">{{ s.open_questions[:60] }}{% if s.open_questions|length > 60 %}…{% endif %}</td>
-        <td><a href="{{ url_for('record_detail', kind='sessions', record_id=s.id) }}" class="btn btn-sm btn-link p-0">edit</a></td>
-      </tr>
-      {% endfor %}
-    </table>
     </div>
-    {% else %}<p class="small-muted mb-0">No sessions logged yet.</p>{% endif %}
+    </div>
+    {% if rs_sessions %}
+    <div class="session-log">
+      {% for s in rs_sessions %}
+      <div class="mb-3 pb-3 {% if not loop.last %}border-bottom{% endif %}">
+        <div class="d-flex justify-content-between align-items-start mb-1">
+          <div>
+            <span class="fw-semibold" style="font-size:0.9rem">{{ s.session_date }}</span>
+            <span class="small-muted ms-2">{{ s.facilitator }}</span>
+            {% if s.participants %}<span class="small-muted ms-1">· {{ s.participants }}</span>{% endif %}
+          </div>
+          <a href="{{ url_for('record_detail', kind='sessions', record_id=s.id) }}" class="btn btn-sm btn-link p-0 text-muted" style="font-size:0.78rem">edit</a>
+        </div>
+        {% if s.methods_used %}
+        <div class="mb-1"><span class="small-muted" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.04em">Methods</span><div style="font-size:0.87rem">{{ s.methods_used }}</div></div>
+        {% endif %}
+        {% if s.observations %}
+        <div class="mb-1"><span class="small-muted" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.04em">Observations</span><div style="font-size:0.87rem">{{ s.observations }}</div></div>
+        {% endif %}
+        {% if s.open_questions %}
+        <div><span class="small-muted" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.04em">Open questions</span><div style="font-size:0.87rem;color:#5c6bc0">{{ s.open_questions }}</div></div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="small-muted mb-0">No sessions logged yet. <a href="#" data-bs-toggle="collapse" data-bs-target="#newSessionForm">Log the first session.</a></p>
+    {% endif %}
   </div>
 </div>
 {% endif %}

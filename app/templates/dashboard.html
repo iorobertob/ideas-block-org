@@ -179,6 +179,38 @@
   </div>
   {% endif %}
 
+  <!-- Legacy planning -->
+  {% if legacy_urgent %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100" style="border-left:3px solid #e8b86d">
+      <div class="card-header d-flex justify-content-between">
+        <span>Legacy planning</span>
+        <a href="{{ url_for('legacy') }}" class="small-muted">all →</a>
+      </div>
+      <div class="card-body">
+        {% if legacy_total > 0 %}
+        <div class="d-flex justify-content-between mb-1">
+          <span class="small-muted" style="font-size:0.78rem">Phase I closure tasks</span>
+          <span class="small-muted" style="font-size:0.78rem">{{ legacy_done }}/{{ legacy_total }}</span>
+        </div>
+        <div class="progress mb-3" style="height:5px">
+          <div class="progress-bar" style="width:{{ (legacy_done/legacy_total*100)|round|int }}%;background:#e8b86d;border-radius:3px"></div>
+        </div>
+        {% endif %}
+        {% for t in legacy_urgent %}
+        <div class="d-flex justify-content-between align-items-start py-1 {% if not loop.last %}border-bottom{% endif %}">
+          <div>
+            <a href="{{ url_for('record_detail', kind='legacy_tasks', record_id=t.id) }}" class="primary-link" style="font-size:0.83rem">{{ t.title[:45] }}{% if t.title|length > 45 %}…{% endif %}</a>
+            <div class="small-muted" style="font-size:0.75rem">{{ t.category }} · {{ t.deadline or 'no deadline' }}</div>
+          </div>
+          <span class="status-badge priority-{{ t.priority }} ms-1" style="white-space:nowrap">{{ t.priority }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Phase I progress -->
   <div class="col-md-6 col-xl-4">
     <div class="card h-100">

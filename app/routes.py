@@ -582,10 +582,18 @@ def register_routes(app):
             'tasks': {'done': tasks_done, 'total': tasks_total},
             'risks_resolved': {'done': risks_closed, 'total': risks_total},
         }
+        # Legacy planning — urgent/overdue tasks
+        legacy_urgent = LegacyTask.query.filter(
+            LegacyTask.status.notin_(['done']),
+            LegacyTask.priority.in_(['urgent', 'high'])
+        ).order_by(LegacyTask.deadline.asc()).limit(5).all()
+        legacy_total = LegacyTask.query.count()
+        legacy_done = LegacyTask.query.filter_by(status='done').count()
         return render_template('dashboard.html', stats=stats, upcoming=upcoming, meetings=meetings,
                                risks=risks, upcoming_events=upcoming_events, my_tasks=my_tasks,
                                phase_progress=phase_progress, active_projects=active_projects,
-                               open_polls=open_polls)
+                               open_polls=open_polls, legacy_urgent=legacy_urgent,
+                               legacy_total=legacy_total, legacy_done=legacy_done)
 
     # ── Auth ──
 
@@ -1424,7 +1432,7 @@ def register_routes(app):
                                project_budget_summary=project_budget_summary,
                                facility_equipment=facility_equipment, wg_memberships=wg_memberships,
                                attachments=attachments, audit_entries=audit_entries,
-                               all_users=all_users)
+                               all_users=all_users, now_date=date.today())
 
     # ── Legacy Planning Dashboard ──
 
