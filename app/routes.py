@@ -12,7 +12,8 @@ from .models import (
     AuditLog, ResearchSession, ProposalRecord, Attachment,
     WorkingGroup, WorkingGroupMembership, ProjectMembership,
     Milestone, Task, Facility, ConstitutionDocument,
-    Poll, PollOption, PollVote, PollToken
+    Poll, PollOption, PollVote, PollToken,
+    LegacyTask
 )
 
 
@@ -447,6 +448,34 @@ RECORD_CONFIG = {
             {'name': 'focus', 'label': 'Focus area'},
             {'name': 'description', 'label': 'Description', 'type': 'textarea'},
             {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [('active', 'active'), ('archived', 'archived')]},
+        ],
+    },
+    'legacy_tasks': {
+        'model': LegacyTask,
+        'title': 'Legacy Tasks',
+        'singular': 'Legacy task',
+        'list_endpoint': 'legacy',
+        'summary': lambda o: o.title,
+        'fields': [
+            {'name': 'title', 'label': 'Title'},
+            {'name': 'category', 'label': 'Category', 'type': 'select', 'choices': [
+                ('equipment', 'Equipment Transfer'),
+                ('knowledge', 'Knowledge Transfer'),
+                ('partnership', 'Partnership Handoff'),
+                ('funding', 'Funding & Finance'),
+                ('governance', 'Governance & Documentation'),
+                ('research', 'Research Output'),
+            ]},
+            {'name': 'owner', 'label': 'Owner'},
+            {'name': 'deadline', 'label': 'Deadline', 'type': 'date'},
+            {'name': 'status', 'label': 'Status', 'type': 'select', 'choices': [
+                ('pending', 'Pending'), ('in_progress', 'In progress'), ('done', 'Done'), ('blocked', 'Blocked'),
+            ]},
+            {'name': 'priority', 'label': 'Priority', 'type': 'select', 'choices': [
+                ('low', 'Low'), ('normal', 'Normal'), ('high', 'High'), ('urgent', 'Urgent'),
+            ]},
+            {'name': 'description', 'label': 'Description', 'type': 'textarea'},
+            {'name': 'notes', 'label': 'Notes / progress', 'type': 'textarea'},
         ],
     },
     'constitution': {
@@ -1396,6 +1425,71 @@ def register_routes(app):
                                facility_equipment=facility_equipment, wg_memberships=wg_memberships,
                                attachments=attachments, audit_entries=audit_entries,
                                all_users=all_users)
+
+    # ── Legacy Planning Dashboard ──
+
+    @app.route('/legacy', methods=['GET', 'POST'])
+    def legacy():
+        if not login_required():
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            create_record('legacy_tasks')
+            db.session.commit()
+            flash('Legacy task created.', 'success')
+            return redirect(url_for('legacy'))
+        category_filter = request.args.get('category', '')
+        status_filter = request.args.get('status', '')
+        query = LegacyTask.query
+        if category_filter:
+            query = query.filter_by(category=category_filter)
+        if status_filter:
+            query = query.filter_by(status=status_filter)
+        tasks = query.order_by(LegacyTask.deadline, LegacyTask.priority).all()
+        today = date.today()
+        # Summary stats
+        all_tasks = LegacyTask.query.all()
+        total = len(all_tasks)
+        done_count = sum(1 for t in all_tasks if t.status == 'done')
+        overdue_count = sum(1 for t in all_tasks if t.deadline and t.deadline < today and t.status != 'done')
+        blocked_count = sum(1 for t in all_tasks if t.status == 'blocked')
+        # Equipment without transfer plan
+        equipment_no_plan = Equipment.query.filter(
+            (Equipment.transfer_plan == '') | (Equipment.transfer_plan == None)
+        ).filter_by(status='available').count()
+        # Projects without outputs
+        projects_no_output = ResearchProject.query.filter(
+            (ResearchProject.outputs == '') | (ResearchProject.outputs == None)
+        ).filter_by(status='active').count()
+        categories = ['equipment', 'knowledge', 'partnership', 'funding', 'governance', 'research']
+        by_category = {}
+        for cat in categories:
+            cat_tasks = [t for t in all_tasks if t.category == cat]
+            done = sum(1 for t in cat_tasks if t.status == 'done')
+            by_category[cat] = {'total': len(cat_tasks), 'done': done}
+        return render_template('legacy.html', tasks=tasks, today=today,
+                               total=total, done_count=done_count,
+                               overdue_count=overdue_count, blocked_count=blocked_count,
+                               equipment_no_plan=equipment_no_plan,
+                               projects_no_output=projects_no_output,
+                               by_category=by_category, categories=categories,
+                               category_filter=category_filter, status_filter=status_filter)
+
+    # ── Legacy task quick status update ──
+
+    @app.route('/legacy/<int:task_id>/status', methods=['POST'])
+    def legacy_task_status(task_id):
+        if not login_required():
+            return redirect(url_for('login'))
+        task = db.session.get(LegacyTask, task_id)
+        if not task:
+            abort(404)
+        new_status = request.form.get('status', task.status)
+        old_status = task.status
+        task.status = new_status
+        _add_audit_log('legacy_tasks', task.id, 'update', 'status', old_status, new_status)
+        db.session.commit()
+        flash(f'"{task.title}" marked as {new_status}.', 'success')
+        return redirect(url_for('legacy'))
 
     # ── About ──
 

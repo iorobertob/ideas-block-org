@@ -3,7 +3,8 @@ from .models import (
     BudgetItem, Meeting, PolicyDocument, RiskRegister, RoadmapItem,
     ProtocolRule, DisseminationEvent, ResearchSession, ProposalRecord,
     Facility, WorkingGroup, WorkingGroupMembership, ProjectMembership,
-    Milestone, Task, ConstitutionDocument, Poll, PollOption, PollVote, PollToken
+    Milestone, Task, ConstitutionDocument, Poll, PollOption, PollVote, PollToken,
+    LegacyTask
 )
 from datetime import datetime, date, timedelta
 import uuid
@@ -245,6 +246,23 @@ def seed_if_empty():
         PollVote(poll_id=poll1.id, option_id=opt1b.id, user_id=director_id),
         PollVote(poll_id=poll1.id, option_id=opt1b.id, user_id=coordinator_id),
         PollVote(poll_id=poll1.id, option_id=opt1a.id, user_id=admin_id),
+    ])
+
+    # ── Legacy Planning Tasks ──
+    db.session.add_all([
+        LegacyTask(category='equipment', title='Document transfer plan for all portable audio equipment', owner='Admin User', deadline=date(2027, 12, 1), status='in_progress', priority='high', description='Each portable audio item must have a named receiving institution and signed transfer agreement before Phase I closes.', notes='8 of 14 items assigned. Waiting on LMTA sign-off for the binaural rigs.', created_by_id=admin_id),
+        LegacyTask(category='equipment', title='Photograph and catalogue all equipment for Phase II inventory', owner='Research Coordinator', deadline=date(2027, 10, 1), status='pending', priority='normal', description='Create a permanent photographic and descriptive record of all equipment regardless of transfer destination.', created_by_id=coordinator_id),
+        LegacyTask(category='knowledge', title='Produce methods documentation for somatic listening research', owner='Artist Researcher', deadline=date(2028, 1, 1), status='pending', priority='urgent', description='The listening-score method developed in Project 1 is undocumented outside session logs. Needs a formal methodology document for Phase II researchers to build on.', created_by_id=researcher_id),
+        LegacyTask(category='knowledge', title='Archive all session recordings and transcripts to institutional repository', owner='Research Coordinator', deadline=date(2028, 3, 1), status='pending', priority='high', description='All audio, video, and text records from research sessions must be transferred to an institutional repository with consistent metadata.', created_by_id=coordinator_id),
+        LegacyTask(category='knowledge', title='Write Phase I retrospective report', owner='MC Director', deadline=date(2028, 6, 1), status='pending', priority='urgent', description='A comprehensive narrative and data-based account of Phase I: what was attempted, what succeeded, what failed, and what Phase II should carry forward.', created_by_id=director_id),
+        LegacyTask(category='partnership', title='Formalise renewal intention with LMTA Mokslo centras', owner='MC Director', deadline=date(2027, 9, 1), status='in_progress', priority='urgent', description='The core partnership agreement expires at Phase I close. A renewal MOU must be signed or the partnership formally concluded with a transition plan.', notes='Negotiation meeting scheduled for April 2027.', created_by_id=director_id),
+        LegacyTask(category='partnership', title='Document intellectual contributions of all partner institutions', owner='Research Coordinator', deadline=date(2027, 12, 1), status='pending', priority='normal', description='Create a structured record of co-authored outputs, shared methods, and intellectual debts to each partner — required for attribution in Phase II publications.', created_by_id=coordinator_id),
+        LegacyTask(category='funding', title='Reconcile and close all Phase I budget lines', owner='Admin User', deadline=date(2028, 7, 1), status='pending', priority='high', description='Full financial reconciliation and closure of all grants, project budgets, and operational accounts before Phase II application.', created_by_id=admin_id),
+        LegacyTask(category='funding', title='Prepare Phase II funding application', owner='MC Director', deadline=date(2027, 11, 1), status='pending', priority='urgent', description='The Phase II funding application must be submitted 6 months before Phase I closes. Requires retrospective evidence from the platform.', created_by_id=director_id),
+        LegacyTask(category='governance', title='Archive meeting minutes and decision records in public repository', owner='Admin User', deadline=date(2028, 5, 1), status='pending', priority='normal', description='All governance records must be archived in a publicly accessible format — both for transparency and as a research output demonstrating governance methodology.', created_by_id=admin_id),
+        LegacyTask(category='governance', title='Ratify Phase II governance constitution', owner='MC Director', deadline=date(2027, 8, 1), status='pending', priority='urgent', description='Phase II will operate with a different institutional structure. The governance model must be constitutionally ratified before the transition.', created_by_id=director_id),
+        LegacyTask(category='research', title='Complete outputs documentation for all active research projects', owner='Research Coordinator', deadline=date(2028, 4, 1), status='pending', priority='high', description='Every project must have documented outputs — publications, scores, performances, prototypes — before the platform is archived.', created_by_id=coordinator_id),
+        LegacyTask(category='research', title='Publish pilot research methodology as open-access document', owner='Artist Researcher', deadline=date(2028, 6, 1), status='pending', priority='normal', description='The research methods developed at Kompresorinė should be published as an open-access document, making the platform itself a research contribution.', created_by_id=researcher_id),
     ])
 
     db.session.commit()

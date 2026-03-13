@@ -1,0 +1,193 @@
+{% extends 'base.html' %}{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>Legacy Planning</h1>
+    <div class="small-muted">What must be completed, transferred, or documented before Phase I closes</div>
+  </div>
+  <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newLegacyForm">+ New task</button>
+</div>
+
+<!-- Create form -->
+<div class="collapse mb-3" id="newLegacyForm">
+<div class="card"><div class="card-body">
+<h5 class="mb-3">New legacy task</h5>
+<form method="post" class="row g-2">
+  <div class="col-md-4"><input class="form-control form-control-sm" name="title" placeholder="Task title" required></div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="category" required>
+      <option value="">Category…</option>
+      <option value="equipment">Equipment Transfer</option>
+      <option value="knowledge">Knowledge Transfer</option>
+      <option value="partnership">Partnership Handoff</option>
+      <option value="funding">Funding & Finance</option>
+      <option value="governance">Governance & Documentation</option>
+      <option value="research">Research Output</option>
+    </select>
+  </div>
+  <div class="col-md-2"><input class="form-control form-control-sm" name="owner" placeholder="Owner" required></div>
+  <div class="col-md-2"><input type="date" class="form-control form-control-sm" name="deadline" placeholder="Deadline"></div>
+  <div class="col-md-1">
+    <select class="form-select form-select-sm" name="priority">
+      <option value="normal">Normal</option>
+      <option value="low">Low</option>
+      <option value="high">High</option>
+      <option value="urgent">Urgent</option>
+    </select>
+  </div>
+  <div class="col-md-1"><button class="btn btn-dark btn-sm w-100">Create</button></div>
+  <div class="col-md-6"><textarea class="form-control form-control-sm" name="description" placeholder="Description" style="min-height:55px"></textarea></div>
+  <div class="col-md-6"><textarea class="form-control form-control-sm" name="notes" placeholder="Notes / progress" style="min-height:55px"></textarea></div>
+</form>
+</div></div>
+</div>
+
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div style="font-size:1.8rem;font-weight:700;color:var(--k-text)">{{ done_count }}<span style="color:var(--k-muted);font-size:1rem">/{{ total }}</span></div>
+        <div class="small-muted mt-1">Tasks complete</div>
+        {% if total > 0 %}
+        <div class="progress mt-2" style="height:5px">
+          <div class="progress-bar" style="width:{{ (done_count/total*100)|round|int }}%;background:var(--k-accent)"></div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div style="font-size:1.8rem;font-weight:700;color:{% if overdue_count > 0 %}#dc3545{% else %}var(--k-text){% endif %}">{{ overdue_count }}</div>
+        <div class="small-muted mt-1">Overdue</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div style="font-size:1.8rem;font-weight:700;color:{% if blocked_count > 0 %}#856404{% else %}var(--k-text){% endif %}">{{ blocked_count }}</div>
+        <div class="small-muted mt-1">Blocked</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div style="font-size:1.8rem;font-weight:700;color:{% if equipment_no_plan > 0 %}#856404{% else %}var(--k-text){% endif %}">{{ equipment_no_plan }}</div>
+        <div class="small-muted mt-1">Equipment without transfer plan</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Category breakdown -->
+<div class="card mb-4">
+  <div class="card-header">Progress by category</div>
+  <div class="card-body">
+    <div class="row g-2">
+    {% set cat_labels = {'equipment':'Equipment Transfer','knowledge':'Knowledge Transfer','partnership':'Partnership Handoff','funding':'Funding & Finance','governance':'Governance & Docs','research':'Research Output'} %}
+    {% set cat_colors = {'equipment':'#5c7c5c','knowledge':'#2d4a6b','partnership':'#6b4a2d','funding':'#4a2d6b','governance':'#4a6b2d','research':'#6b2d4a'} %}
+    {% for cat in categories %}
+    {% set s = by_category[cat] %}
+    <div class="col-md-4 col-sm-6">
+      <div class="d-flex justify-content-between mb-1">
+        <span class="small-muted" style="font-size:0.78rem">{{ cat_labels[cat] }}</span>
+        <span class="small-muted" style="font-size:0.78rem">{{ s.done }}/{{ s.total }}</span>
+      </div>
+      <div class="progress" style="height:6px;background:#e9ecef;border-radius:3px">
+        {% if s.total > 0 %}
+        <div class="progress-bar" style="width:{{ (s.done/s.total*100)|round|int }}%;background:{{ cat_colors[cat] }};border-radius:3px"></div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% if projects_no_output > 0 %}
+<div class="alert alert-warning py-2 mb-3" style="font-size:0.86rem">
+  <strong>{{ projects_no_output }} active project{{ 's' if projects_no_output != 1 }}</strong> have no documented outputs yet.
+  <a href="{{ url_for('projects') }}" class="alert-link">Review projects</a>
+</div>
+{% endif %}
+
+<!-- Filters -->
+<form method="get" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+  <select class="form-select form-select-sm" style="max-width:180px" name="category">
+    <option value="">All categories</option>
+    {% for cat in categories %}
+    <option value="{{ cat }}" {% if category_filter == cat %}selected{% endif %}>{{ cat_labels[cat] }}</option>
+    {% endfor %}
+  </select>
+  <select class="form-select form-select-sm" style="max-width:140px" name="status">
+    <option value="">All statuses</option>
+    <option value="pending" {% if status_filter=='pending' %}selected{% endif %}>Pending</option>
+    <option value="in_progress" {% if status_filter=='in_progress' %}selected{% endif %}>In progress</option>
+    <option value="done" {% if status_filter=='done' %}selected{% endif %}>Done</option>
+    <option value="blocked" {% if status_filter=='blocked' %}selected{% endif %}>Blocked</option>
+  </select>
+  <button class="btn btn-sm btn-outline-secondary">Filter</button>
+  {% if category_filter or status_filter %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('legacy') }}">Clear</a>{% endif %}
+</form>
+
+<!-- Task table -->
+<div class="card">
+  <div class="card-body p-0">
+  {% if tasks %}
+  <table class="table table-hover linked-row mb-0">
+    <thead>
+      <tr>
+        <th style="width:32px"></th>
+        <th>Task</th>
+        <th class="hide-mobile">Category</th>
+        <th class="hide-mobile">Owner</th>
+        <th class="hide-mobile">Deadline</th>
+        <th>Status</th>
+        <th class="hide-mobile">Priority</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for t in tasks %}
+    {% set overdue = t.deadline and t.deadline < today and t.status != 'done' %}
+    <tr {% if overdue %}class="table-warning"{% elif t.status == 'done' %}style="opacity:0.55"{% endif %}>
+      <td>
+        <form method="post" action="{{ url_for('legacy_task_status', task_id=t.id) }}" class="d-inline">
+          {% if t.status == 'done' %}
+          <button type="submit" name="status" value="pending" class="btn btn-sm p-0 border-0" title="Mark pending" style="font-size:1rem;line-height:1;color:var(--k-accent)">✓</button>
+          {% else %}
+          <button type="submit" name="status" value="done" class="btn btn-sm p-0 border-0" title="Mark done" style="font-size:1rem;line-height:1;color:#ccc">○</button>
+          {% endif %}
+        </form>
+      </td>
+      <td>
+        <a class="primary-link" href="{{ url_for('record_detail', kind='legacy_tasks', record_id=t.id) }}">{{ t.title }}</a>
+        {% if t.description %}<div class="small-muted" style="font-size:0.78rem">{{ t.description[:80] }}{% if t.description|length > 80 %}…{% endif %}</div>{% endif %}
+      </td>
+      <td class="hide-mobile">
+        <span class="agenda-pill" style="background:{{ cat_colors.get(t.category,'#eee') }}20;color:{{ cat_colors.get(t.category,'#555') }}">{{ cat_labels.get(t.category, t.category) }}</span>
+      </td>
+      <td class="hide-mobile small-muted">{{ t.owner }}</td>
+      <td class="hide-mobile small-muted {% if overdue %}text-danger fw-bold{% endif %}">
+        {{ t.deadline if t.deadline else '—' }}
+        {% if overdue %}<span title="Overdue"> !</span>{% endif %}
+      </td>
+      <td><span class="status-badge status-{{ t.status }}">{{ t.status.replace('_',' ') }}</span></td>
+      <td class="hide-mobile"><span class="status-badge priority-{{ t.priority }}">{{ t.priority }}</span></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="p-3 small-muted">
+    No legacy tasks{% if category_filter or status_filter %} matching these filters{% endif %}.
+    {% if not category_filter and not status_filter %}
+    <a href="#" data-bs-toggle="collapse" data-bs-target="#newLegacyForm">Create the first one.</a>
+    {% endif %}
+  </div>
+  {% endif %}
+  </div>
+</div>
+{% endblock %}

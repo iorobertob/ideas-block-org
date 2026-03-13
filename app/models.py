@@ -323,6 +323,18 @@ class PollVote(db.Model):
     option = db.relationship('PollOption')
 
 
+class LegacyTask(OwnershipMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(80), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, default='')
+    owner = db.Column(db.String(120), nullable=False)
+    deadline = db.Column(db.Date, nullable=True)
+    status = db.Column(db.String(30), default='pending')
+    priority = db.Column(db.String(20), default='normal')
+    notes = db.Column(db.Text, default='')
+
+
 class PollToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=False)
