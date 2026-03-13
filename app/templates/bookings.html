@@ -1,32 +1,85 @@
 {% extends 'base.html' %}{% block content %}
-<div class='row g-4'><div class='col-lg-4'><div class='card'><div class='card-body'><h3>Add booking</h3>
-<div class='alert alert-info py-2 small mb-3'><strong>Protocol:</strong> Weekday 9:00–17:00 slots are reserved for research use. Non-research bookings during core hours require a documented reason.</div>
-<form method='post' id='bookingForm'>
-<select class='form-select mb-2' name='project_id'>{% for p in projects %}<option value='{{ p.id }}'>{{ p.title }}</option>{% endfor %}</select>
-<input class='form-control mb-2' name='space' placeholder='Space' required>
-<input class='form-control mb-2' name='booking_type' id='bookingType' placeholder='Booking type' required>
-<input class='form-control mb-2' type='datetime-local' name='start_dt' id='startDt' required>
-<input class='form-control mb-2' type='datetime-local' name='end_dt' required>
-<input class='form-control mb-2' name='lead_name' value='{{ current_user.name }}' placeholder='Lead name' required>
-<textarea class='form-control mb-2' name='notes' placeholder='Notes / override reason if non-research core-hours booking'></textarea>
-<button class='btn btn-dark'>Save booking</button></form></div></div></div>
-<div class='col-lg-8'><div class='card'><div class='card-body'>
-<div class='d-flex justify-content-between align-items-center mb-3'>
-  <h3 class='mb-0'>Bookings</h3>
-  <a class='btn btn-outline-secondary btn-sm' href='{{ url_for("booking_calendar") }}'>Calendar view</a>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>Bookings</h1>
+    <div class="small-muted">Space reservations · Research-first scheduling enforced</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('booking_calendar') }}" class="btn btn-outline-secondary btn-sm">Calendar view</a>
+    <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newBookingForm">+ New booking</button>
+  </div>
 </div>
-<form method='get' class='d-flex gap-2 mb-3 flex-wrap'>
-  <input class='form-control form-control-sm' style='max-width:220px' name='q' value='{{ q }}' placeholder='Search space, type, lead…'>
-  <select class='form-select form-select-sm' style='max-width:180px' name='space'>
-    <option value=''>All spaces</option>
-    {% for s in spaces %}<option value='{{ s }}' {% if s == space %}selected{% endif %}>{{ s }}</option>{% endfor %}
-  </select>
-  <button class='btn btn-sm btn-outline-secondary'>Filter</button>
-  {% if q or space %}<a class='btn btn-sm btn-outline-secondary' href='{{ url_for("bookings") }}'>Clear</a>{% endif %}
+
+<div class="alert alert-light border py-2 small mb-3" style="border-left: 3px solid #5c7c5c !important;">
+  <strong>Protocol:</strong> Weekday 09:00–17:00 is reserved for research use. Non-research bookings during core hours require a documented reason in the Notes field.
+</div>
+
+<div class="collapse mb-3" id="newBookingForm">
+<div class="card"><div class="card-body">
+<form method="post" id="bookingForm" class="row g-2">
+  <div class="col-md-4">
+    <select class="form-select form-select-sm" name="project_id">
+      {% for p in projects %}<option value="{{ p.id }}">{{ p.title }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4"><input class="form-control form-control-sm" name="space" placeholder="Space (e.g. Research Studio A)" required></div>
+  <div class="col-md-4"><input class="form-control form-control-sm" name="booking_type" id="bookingType" placeholder="Booking type (e.g. Residency Block)" required></div>
+  <div class="col-md-3"><input class="form-control form-control-sm" type="datetime-local" name="start_dt" id="startDt" required></div>
+  <div class="col-md-3"><input class="form-control form-control-sm" type="datetime-local" name="end_dt" required></div>
+  <div class="col-md-3"><input class="form-control form-control-sm" name="lead_name" value="{{ current_user.name }}" placeholder="Lead name" required></div>
+  <div class="col-md-3 d-flex align-items-end"><button class="btn btn-dark btn-sm w-100">Book</button></div>
+  <div class="col-12"><textarea class="form-control form-control-sm" name="notes" placeholder="Notes (required for non-research core-hours bookings)" style="min-height:50px"></textarea></div>
 </form>
-<table class='table table-striped linked-row'><tr><th>Space</th><th>Project</th><th>Start</th><th>End</th></tr>
-{% for b in bookings %}<tr><td><a class='primary-link' href='{{ url_for("record_detail", kind="bookings", record_id=b.id) }}'>{{ b.space }}</a><div class='small-muted'>{{ b.booking_type }}</div></td><td>{{ b.project.title }}</td><td>{{ b.start_dt.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ b.end_dt.strftime('%Y-%m-%d %H:%M') }}</td></tr>{% else %}<tr><td colspan='4'>No bookings found.</td></tr>{% endfor %}
-</table></div></div></div></div>
+</div></div>
+</div>
+
+<!-- Filter -->
+<form method="get" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+  <input class="form-control form-control-sm" style="max-width:220px" name="q" value="{{ q }}" placeholder="Search space, type, lead…">
+  <select class="form-select form-select-sm" style="max-width:180px" name="space">
+    <option value="">All spaces</option>
+    {% for s in spaces %}<option value="{{ s }}" {% if s == space %}selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+  <button class="btn btn-sm btn-outline-secondary">Filter</button>
+  {% if q or space %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('bookings') }}">Clear</a>{% endif %}
+</form>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if bookings %}
+    <div class="table-responsive">
+    <table class="table table-hover linked-row mb-0">
+      <thead>
+        <tr>
+          <th>Space</th>
+          <th class="hide-mobile">Project</th>
+          <th>Start</th>
+          <th class="hide-mobile">End</th>
+          <th class="hide-mobile">Lead</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bookings %}
+        <tr>
+          <td>
+            <a class="primary-link" href="{{ url_for('record_detail', kind='bookings', record_id=b.id) }}">{{ b.space }}</a>
+            <div class="small-muted"><span class="agenda-pill">{{ b.booking_type }}</span></div>
+          </td>
+          <td class="hide-mobile small-muted">{{ b.project.title[:35] if b.project else '—' }}</td>
+          <td class="text-nowrap small-muted">{{ b.start_dt.strftime('%d %b %H:%M') }}</td>
+          <td class="hide-mobile text-nowrap small-muted">{{ b.end_dt.strftime('%d %b %H:%M') }}</td>
+          <td class="hide-mobile small-muted">{{ b.lead_name }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="p-3 small-muted">No bookings found.</div>
+    {% endif %}
+  </div>
+</div>
+
 <script>
 document.getElementById('bookingForm').addEventListener('submit', function(e) {
   var bookingType = document.getElementById('bookingType').value.toLowerCase();
@@ -35,11 +88,11 @@ document.getElementById('bookingForm').addEventListener('submit', function(e) {
   var dt = new Date(startDt);
   var hour = dt.getHours();
   var day = dt.getDay();
-  var researchKeywords = ['research', 'lab', 'rehearsal', 'session', 'workshop', 'seminar', 'residency', 'method', 'experiment', 'practice'];
-  var isResearch = researchKeywords.some(function(k) { return bookingType.indexOf(k) !== -1; });
+  var researchKeywords = ['research','lab','rehearsal','session','workshop','seminar','residency','method','experiment','practice'];
+  var isResearch = researchKeywords.some(function(k){ return bookingType.indexOf(k) !== -1; });
   var isWeekdayCore = day >= 1 && day <= 5 && hour >= 9 && hour < 17;
   if (isWeekdayCore && !isResearch) {
-    var ok = confirm('Protocol Notice\n\nThis booking occupies weekday core research hours (Mon–Fri 9:00–17:00) without a research designation.\n\nThis may conflict with the Research-First Scheduling Protocol (Principle: Research-First Scheduling).\n\nIf this is an exception, please document the reason in the Notes field.\n\nProceed anyway?');
+    var ok = confirm('Protocol Notice\n\nThis booking occupies weekday core research hours (Mon–Fri 9:00–17:00) without a research designation.\n\nThis may conflict with the Research-First Scheduling Protocol.\n\nIf this is an exception, please document the reason in the Notes field.\n\nProceed anyway?');
     if (!ok) { e.preventDefault(); }
   }
 });
