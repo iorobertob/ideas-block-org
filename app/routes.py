@@ -990,6 +990,51 @@ def register_routes(app):
 
     # ── Reports ──
 
+    def _month_stats(year, month):
+        """Gather activity statistics for a given year/month."""
+        ym = f'{year}-{month:02d}'
+        month_start = datetime(year, month, 1)
+        last_day = cal_module.monthrange(year, month)[1]
+        month_end = datetime(year, month, last_day, 23, 59, 59)
+
+        bookings = Booking.query.filter(
+            Booking.start_dt >= month_start, Booking.start_dt <= month_end
+        ).all()
+        events = DisseminationEvent.query.filter(
+            func.strftime('%Y-%m', DisseminationEvent.event_date) == ym
+        ).all()
+        sessions = ResearchSession.query.filter(
+            func.strftime('%Y-%m', ResearchSession.session_date) == ym
+        ).all()
+        meetings = Meeting.query.filter(
+            func.strftime('%Y-%m', Meeting.meeting_date) == ym
+        ).all()
+        meeting_ids = [m.id for m in meetings]
+        proposals = ProposalRecord.query.filter(
+            ProposalRecord.meeting_id.in_(meeting_ids)
+        ).all() if meeting_ids else []
+        approved = [p for p in proposals if p.outcome == 'approved']
+        milestones_reached = Milestone.query.filter(
+            func.strftime('%Y-%m', Milestone.target_date) == ym,
+            Milestone.status == 'reached'
+        ).all()
+        tasks_done = Task.query.filter(
+            func.strftime('%Y-%m', Task.due_date) == ym,
+            Task.status == 'done'
+        ).all()
+        risks_open = RiskRegister.query.filter(
+            RiskRegister.status.in_(['open', 'monitoring'])
+        ).all()
+        high_risks = [r for r in risks_open if r.severity == 'High']
+
+        return dict(
+            ym=ym, year=year, month=month,
+            bookings=bookings, events=events, sessions=sessions,
+            meetings=meetings, proposals=proposals, approved=approved,
+            milestones_reached=milestones_reached, tasks_done=tasks_done,
+            risks_open=risks_open, high_risks=high_risks,
+        )
+
     @app.route('/reports', methods=['GET', 'POST'])
     def reports():
         if not login_required():
@@ -998,12 +1043,91 @@ def register_routes(app):
             create_record('reports')
             return redirect(url_for('reports'))
         reports_list = MonthlyReport.query.order_by(MonthlyReport.created_at.desc()).all()
-        current_month = date.today().strftime('%Y-%m')
-        month_start = datetime.strptime(current_month + '-01', '%Y-%m-%d')
-        month_bkgs = Booking.query.filter(Booking.start_dt >= month_start).count()
-        month_evts = DisseminationEvent.query.filter(func.strftime('%Y-%m', DisseminationEvent.event_date) == current_month).count()
-        return render_template('reports.html', reports=reports_list,
-                               month_bookings=month_bkgs, month_events=month_evts)
+        today = date.today()
+        stats = _month_stats(today.year, today.month)
+        return render_template('reports.html', reports=reports_list, stats=stats,
+                               current_month=stats['ym'])
+
+    @app.route('/reports/generate/<int:year>/<int:month>')
+    def report_generate(year, month):
+        if not login_required():
+            return jsonify({'error': 'unauthorized'}), 401
+        month = max(1, min(12, month))
+        s = _month_stats(year, month)
+        month_name = cal_module.month_name[month]
+
+        lines = [f'Monthly Report — {month_name} {year}', '']
+
+        # Research activity
+        lines.append('RESEARCH ACTIVITY')
+        if s['sessions']:
+            proj_names = {}
+            for sess in s['sessions']:
+                pname = sess.project.title if sess.project else 'Unknown project'
+                proj_names.setdefault(pname, []).append(sess)
+            for pname, sess_list in proj_names.items():
+                lines.append(f'  · {pname}: {len(sess_list)} session{"s" if len(sess_list)!=1 else ""}')
+        else:
+            lines.append('  · No research sessions logged this month.')
+        lines.append('')
+
+        # Space use
+        lines.append('SPACE USE')
+        if s['bookings']:
+            by_type = {}
+            for b in s['bookings']:
+                by_type.setdefault(b.booking_type, []).append(b)
+            for btype, blist in sorted(by_type.items()):
+                lines.append(f'  · {btype}: {len(blist)} booking{"s" if len(blist)!=1 else ""}')
+        else:
+            lines.append('  · No space bookings this month.')
+        lines.append('')
+
+        # Program / dissemination
+        lines.append('PROGRAM & DISSEMINATION')
+        if s['events']:
+            for e in s['events']:
+                lines.append(f'  · {e.title} ({e.format})')
+        else:
+            lines.append('  · No dissemination events this month.')
+        lines.append('')
+
+        # Governance
+        lines.append('GOVERNANCE')
+        if s['meetings']:
+            for m in s['meetings']:
+                lines.append(f'  · {m.title} ({m.meeting_type}, {m.meeting_date})')
+        else:
+            lines.append('  · No meetings held this month.')
+        if s['approved']:
+            lines.append(f'  Proposals approved: {len(s["approved"])}')
+            for p in s['approved']:
+                lines.append(f'    — {p.proposal_text[:80]}{"…" if len(p.proposal_text)>80 else ""}')
+        lines.append('')
+
+        # Milestones & tasks
+        lines.append('MILESTONES & TASKS')
+        if s['milestones_reached']:
+            for ms in s['milestones_reached']:
+                lines.append(f'  · Milestone reached: {ms.title}')
+        if s['tasks_done']:
+            lines.append(f'  · Tasks completed: {len(s["tasks_done"])}')
+        if not s['milestones_reached'] and not s['tasks_done']:
+            lines.append('  · No milestones or tasks completed this month.')
+        lines.append('')
+
+        # Risks
+        lines.append('RISK REGISTER')
+        lines.append(f'  · Open risks: {len(s["risks_open"])} ({len(s["high_risks"])} high severity)')
+        if s['high_risks']:
+            for r in s['high_risks']:
+                lines.append(f'    ⚠ {r.title} — {r.status}')
+        lines.append('')
+
+        lines.append('NOTES & OBSERVATIONS')
+        lines.append('  [Add any qualitative reflections, unexpected developments, or forward-looking notes here.]')
+
+        return jsonify({'draft': '\n'.join(lines)})
 
     # ── Working Groups ──
 

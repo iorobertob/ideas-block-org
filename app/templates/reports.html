@@ -9,14 +9,72 @@
 
 <div class="collapse mb-3" id="newReportForm">
 <div class="card"><div class="card-body">
-<div class="alert alert-light border py-2 small mb-3">
-  This month's activity: <strong>{{ month_bookings }}</strong> booking{{ 's' if month_bookings != 1 }}, <strong>{{ month_events }}</strong> dissemination event{{ 's' if month_events != 1 }}.
-</div>
-<form method="post" class="row g-2">
-  <div class="col-md-3"><input class="form-control form-control-sm" name="month" placeholder="YYYY-MM" required></div>
-  <div class="col-md-1"><button class="btn btn-dark btn-sm w-100">Save</button></div>
-  <div class="col-12"><textarea class="form-control form-control-sm" name="summary" placeholder="Summary — key activities, outputs, governance decisions, open issues" required style="min-height:100px"></textarea></div>
-</form>
+
+  <!-- This month's activity summary -->
+  <div class="card mb-3" style="background:#f8f9fa;border-color:#dee2e6">
+    <div class="card-body py-2">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="small fw-semibold">This month's activity — {{ stats.ym }}</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="generateBtn"
+                onclick="generateDraft('{{ stats.year }}', '{{ stats.month }}')">
+          ↓ Generate draft
+        </button>
+      </div>
+      <div class="row g-2">
+        <div class="col-auto">
+          <div class="border rounded px-3 py-1 text-center" style="min-width:70px">
+            <div class="fw-bold">{{ stats.bookings|length }}</div>
+            <div style="font-size:0.7rem;color:#6b6b6b;text-transform:uppercase">Bookings</div>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="border rounded px-3 py-1 text-center" style="min-width:70px">
+            <div class="fw-bold">{{ stats.sessions|length }}</div>
+            <div style="font-size:0.7rem;color:#6b6b6b;text-transform:uppercase">Sessions</div>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="border rounded px-3 py-1 text-center" style="min-width:70px">
+            <div class="fw-bold">{{ stats.meetings|length }}</div>
+            <div style="font-size:0.7rem;color:#6b6b6b;text-transform:uppercase">Meetings</div>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="border rounded px-3 py-1 text-center" style="min-width:70px">
+            <div class="fw-bold">{{ stats.events|length }}</div>
+            <div style="font-size:0.7rem;color:#6b6b6b;text-transform:uppercase">Events</div>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="border rounded px-3 py-1 text-center" style="min-width:70px">
+            <div class="fw-bold">{{ stats.approved|length }}</div>
+            <div style="font-size:0.7rem;color:#6b6b6b;text-transform:uppercase">Approved</div>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="border rounded px-3 py-1 text-center" style="min-width:70px">
+            <div class="fw-bold">{{ stats.tasks_done|length }}</div>
+            <div style="font-size:0.7rem;color:#6b6b6b;text-transform:uppercase">Tasks done</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" class="row g-2">
+    <div class="col-md-3">
+      <input class="form-control form-control-sm" name="month" id="reportMonth"
+             placeholder="YYYY-MM" value="{{ current_month }}" required>
+    </div>
+    <div class="col-md-1">
+      <button class="btn btn-dark btn-sm w-100">Save</button>
+    </div>
+    <div class="col-12">
+      <textarea class="form-control form-control-sm" name="summary" id="reportSummary"
+                placeholder="Summary — key activities, outputs, governance decisions, open issues"
+                required style="min-height:200px;font-family:monospace;font-size:0.83rem"></textarea>
+    </div>
+  </form>
 </div></div>
 </div>
 
@@ -34,9 +92,9 @@
       <tbody>
         {% for r in reports %}
         <tr>
-          <td class="fw-semibold"><a class="primary-link" href="{{ url_for('record_detail', kind='reports', record_id=r.id) }}">{{ r.month }}</a></td>
+          <td class="fw-semibold text-nowrap"><a class="primary-link" href="{{ url_for('record_detail', kind='reports', record_id=r.id) }}">{{ r.month }}</a></td>
           <td class="small-muted text-nowrap">{{ r.created_at.strftime('%Y-%m-%d') }}</td>
-          <td class="small" style="max-width:500px">{{ r.summary[:200] }}{% if r.summary|length > 200 %}…{% endif %}</td>
+          <td class="small" style="max-width:500px;white-space:pre-wrap">{{ r.summary[:200] }}{% if r.summary|length > 200 %}…{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -46,4 +104,26 @@
     {% endif %}
   </div>
 </div>
+
+<script>
+function generateDraft(year, month) {
+  var btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  fetch('/reports/generate/' + year + '/' + month)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data.draft) {
+        document.getElementById('reportSummary').value = data.draft;
+        document.getElementById('reportMonth').value = year + '-' + String(month).padStart(2,'0');
+      }
+      btn.disabled = false;
+      btn.textContent = '↓ Generate draft';
+    })
+    .catch(function(){
+      btn.disabled = false;
+      btn.textContent = '↓ Generate draft';
+    });
+}
+</script>
 {% endblock %}
