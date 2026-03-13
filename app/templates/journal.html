@@ -1,0 +1,85 @@
+{% extends 'base.html' %}{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>Research Journal</h1>
+    <div class="small-muted">All sessions across all projects — {{ sessions|length }} total</div>
+  </div>
+  <a href="{{ url_for('projects') }}" class="btn btn-sm btn-outline-secondary">← Projects</a>
+</div>
+
+<!-- Filters -->
+<form method="get" class="d-flex gap-2 mb-4 flex-wrap align-items-center">
+  <input class="form-control form-control-sm" style="max-width:240px" name="q" value="{{ q }}" placeholder="Search observations, methods, questions…">
+  <select class="form-select form-select-sm" style="max-width:220px" name="project">
+    <option value="">All projects</option>
+    {% for p in projects %}
+    <option value="{{ p.id }}" {% if project_filter == p.id|string %}selected{% endif %}>{{ p.title[:35] }}{% if p.title|length > 35 %}…{% endif %}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-sm btn-outline-secondary">Filter</button>
+  {% if q or project_filter %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('journal') }}">Clear</a>{% endif %}
+</form>
+
+{% if sessions %}
+<div class="row g-3">
+{% set current_project_id = namespace(val=none) %}
+{% for s in sessions %}
+{% set proj = project_map.get(s.project_id) %}
+
+{% if proj and proj.id != current_project_id.val and not project_filter %}
+{% set current_project_id.val = proj.id %}
+<div class="col-12">
+  <div class="small-muted d-flex align-items-center gap-2" style="margin-top:0.5rem">
+    <span class="agenda-pill {% if proj.phase == 'phase_i' %}badge-phase-i{% elif proj.phase == 'phase_ii' %}badge-phase-ii{% else %}badge-pilot{% endif %}">{{ proj.phase }}</span>
+    <a href="{{ url_for('record_detail', kind='projects', record_id=proj.id) }}" class="fw-semibold primary-link">{{ proj.title }}</a>
+    <span class="text-muted">— {{ proj.lead }}</span>
+  </div>
+</div>
+{% endif %}
+
+<div class="col-12">
+<div class="card">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <div>
+        <span class="fw-semibold" style="font-size:0.9rem">{{ s.session_date }}</span>
+        <span class="small-muted ms-2">{{ s.facilitator }}</span>
+        {% if s.participants %}<span class="small-muted ms-1">· {{ s.participants }}</span>{% endif %}
+        {% if project_filter and proj %}
+        <a href="{{ url_for('record_detail', kind='projects', record_id=proj.id) }}" class="ms-2 small-muted">{{ proj.title[:30] }}</a>
+        {% endif %}
+      </div>
+      <a href="{{ url_for('record_detail', kind='sessions', record_id=s.id) }}" class="btn btn-sm btn-outline-secondary btn-sm">edit</a>
+    </div>
+    <div class="row g-3">
+      {% if s.methods_used %}
+      <div class="col-md-4">
+        <div class="small-muted" style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.2rem">Methods</div>
+        <div style="font-size:0.87rem">{{ s.methods_used }}</div>
+      </div>
+      {% endif %}
+      {% if s.observations %}
+      <div class="col-md-4">
+        <div class="small-muted" style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.2rem">Observations</div>
+        <div style="font-size:0.87rem">{{ s.observations }}</div>
+      </div>
+      {% endif %}
+      {% if s.open_questions %}
+      <div class="col-md-4">
+        <div class="small-muted" style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.2rem">Open questions</div>
+        <div style="font-size:0.87rem;color:#5c6bc0">{{ s.open_questions }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="card-body small-muted">
+  No sessions found{% if q or project_filter %} matching these filters{% endif %}.
+  {% if not project_filter %}<a href="{{ url_for('projects') }}">Open a project to log the first session.</a>{% endif %}
+</div></div>
+{% endif %}
+{% endblock %}

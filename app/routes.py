@@ -1290,6 +1290,31 @@ def register_routes(app):
         entity_types = [r[0] for r in db.session.query(AuditLog.entity_type).distinct().order_by(AuditLog.entity_type).all()]
         return render_template('audit.html', entries=entries, q=q, entity_type=entity_type, entity_types=entity_types)
 
+    # ── Research Journal (all sessions) ──
+
+    @app.route('/journal')
+    def journal():
+        if not login_required():
+            return redirect(url_for('login'))
+        project_id = request.args.get('project', '')
+        q = request.args.get('q', '').strip()
+        query = ResearchSession.query
+        if project_id:
+            query = query.filter_by(project_id=int(project_id))
+        if q:
+            query = query.filter(
+                ResearchSession.observations.ilike(f'%{q}%') |
+                ResearchSession.methods_used.ilike(f'%{q}%') |
+                ResearchSession.open_questions.ilike(f'%{q}%') |
+                ResearchSession.facilitator.ilike(f'%{q}%') |
+                ResearchSession.participants.ilike(f'%{q}%')
+            )
+        sessions_list = query.order_by(ResearchSession.session_date.desc()).all()
+        projects = ResearchProject.query.order_by(ResearchProject.title).all()
+        project_map = {p.id: p for p in projects}
+        return render_template('journal.html', sessions=sessions_list, projects=projects,
+                               project_map=project_map, project_filter=project_id, q=q)
+
     # ── Sub-entity create routes ──
 
     @app.route('/sessions', methods=['POST'])
