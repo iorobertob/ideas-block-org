@@ -539,6 +539,7 @@ def register_routes(app):
         risks = RiskRegister.query.filter(RiskRegister.status != 'closed').order_by(RiskRegister.severity.desc()).limit(4).all()
         upcoming_events = DisseminationEvent.query.filter(DisseminationEvent.event_date >= date.today()).order_by(DisseminationEvent.event_date.asc()).limit(3).all()
         my_tasks = Task.query.filter_by(assigned_to_id=current_user().id).filter(Task.status.in_(['todo', 'in_progress'])).order_by(Task.due_date.asc()).limit(5).all() if current_user() else []
+        open_polls = Poll.query.filter_by(status='open').order_by(Poll.id.desc()).limit(3).all()
         # Phase progress indicators
         ms_total = Milestone.query.count()
         ms_reached = Milestone.query.filter_by(status='reached').count()
@@ -554,7 +555,8 @@ def register_routes(app):
         }
         return render_template('dashboard.html', stats=stats, upcoming=upcoming, meetings=meetings,
                                risks=risks, upcoming_events=upcoming_events, my_tasks=my_tasks,
-                               phase_progress=phase_progress, active_projects=active_projects)
+                               phase_progress=phase_progress, active_projects=active_projects,
+                               open_polls=open_polls)
 
     # ── Auth ──
 

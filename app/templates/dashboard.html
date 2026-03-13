@@ -153,6 +153,32 @@
   </div>
   {% endif %}
 
+  <!-- Open polls -->
+  {% if open_polls %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between">
+        Open polls
+        <a href="{{ url_for('polls') }}" class="small-muted">all →</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for p in open_polls %}
+          <li class="list-group-item px-3 py-2">
+            <a class="primary-link d-block" href="{{ url_for('poll_detail', poll_id=p.id) }}">{{ p.title[:60] }}{% if p.title|length > 60 %}…{% endif %}</a>
+            <div class="small-muted">
+              {{ p.votes.count() }} vote{{ 's' if p.votes.count() != 1 }}
+              · {{ p.poll_type }} choice
+              {% if p.is_public %}<span class="text-success ms-1">public</span>{% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Phase I progress -->
   <div class="col-md-6 col-xl-4">
     <div class="card h-100">
