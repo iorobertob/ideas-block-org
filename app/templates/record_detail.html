@@ -224,17 +224,44 @@
 
   <div class="col-md-6">
     <div class="card">
-      <div class="card-header d-flex justify-content-between">Tasks <a href="{{ url_for('tasks') }}?entity_type=projects&entity_id={{ obj.id }}" class="small-muted">all →</a></div>
-      <div class="card-body">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Tasks</span>
+        <div class="d-flex gap-1">
+          <button class="btn btn-sm btn-outline-dark" data-bs-toggle="collapse" data-bs-target="#quickTaskForm" style="font-size:0.72rem">+ Quick add</button>
+          <a href="{{ url_for('tasks') }}?entity_type=projects&entity_id={{ obj.id }}" class="btn btn-sm btn-link p-0 small-muted">all →</a>
+        </div>
+      </div>
+      <div class="collapse" id="quickTaskForm">
+        <div class="card-body border-bottom">
+          <form method="post" action="{{ url_for('tasks') }}" class="row g-1">
+            <input type="hidden" name="entity_type" value="projects">
+            <input type="hidden" name="entity_id" value="{{ obj.id }}">
+            <input type="hidden" name="next" value="{{ url_for('record_detail', kind='projects', record_id=obj.id) }}">
+            <div class="col-12"><input class="form-control form-control-sm" name="title" placeholder="Task title" required></div>
+            <div class="col-6">
+              <select class="form-select form-select-sm" name="assigned_to_id">
+                <option value="">— unassigned —</option>
+                {% for u in all_users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-4"><input type="date" class="form-control form-control-sm" name="due_date"></div>
+            <div class="col-2 d-flex align-items-end"><button class="btn btn-sm btn-dark w-100">Add</button></div>
+          </form>
+        </div>
+      </div>
+      <div class="card-body {% if not project_tasks %}{% endif %} p-0">
         {% if project_tasks %}
         <div class="table-responsive">
         <table class="table table-sm mb-0">
           <tr><th>Task</th><th>Assignee</th><th>Status</th><th></th></tr>
           {% for t in project_tasks %}
-          <tr>
-            <td><a href="{{ url_for('record_detail', kind='tasks', record_id=t.id) }}" class="primary-link">{{ t.title }}</a></td>
+          <tr {% if t.status == 'done' %}style="opacity:0.55"{% endif %}>
+            <td>
+              <a href="{{ url_for('record_detail', kind='tasks', record_id=t.id) }}" class="primary-link">{{ t.title }}</a>
+              {% if t.url %}<a href="{{ t.url }}" target="_blank" rel="noopener" class="ms-1 small-muted">↗</a>{% endif %}
+            </td>
             <td class="small-muted">{{ t.assignee.name if t.assignee else '—' }}</td>
-            <td><span class="status-badge status-{{ t.status }}">{{ t.status }}</span></td>
+            <td><span class="status-badge status-{{ t.status }}">{{ t.status.replace('_',' ') }}</span></td>
             <td>
               <form method="post" action="{{ url_for('update_task_status', task_id=t.id) }}" class="d-inline">
                 <input type="hidden" name="status" value="{{ 'done' if t.status != 'done' else 'todo' }}">
@@ -245,7 +272,7 @@
           {% endfor %}
         </table>
         </div>
-        {% else %}<p class="small-muted mb-0">No tasks for this project.</p>{% endif %}
+        {% else %}<p class="p-3 small-muted mb-0">No tasks yet. <a href="#quickTaskForm" data-bs-toggle="collapse">Add one.</a></p>{% endif %}
       </div>
     </div>
   </div>

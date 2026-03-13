@@ -1064,6 +1064,9 @@ def register_routes(app):
             _add_audit_log('tasks', t.id, 'create')
             db.session.commit()
             flash('Task created.', 'success')
+            next_url = request.form.get('next') or request.referrer
+            if next_url and next_url.startswith('/'):
+                return redirect(next_url)
             return redirect(url_for('tasks'))
         q = request.args.get('q', '').strip()
         status_f = request.args.get('status', '')
