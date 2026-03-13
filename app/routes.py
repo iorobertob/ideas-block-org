@@ -535,8 +535,22 @@ def register_routes(app):
         risks = RiskRegister.query.filter(RiskRegister.status != 'closed').order_by(RiskRegister.severity.desc()).limit(4).all()
         upcoming_events = DisseminationEvent.query.filter(DisseminationEvent.event_date >= date.today()).order_by(DisseminationEvent.event_date.asc()).limit(3).all()
         my_tasks = Task.query.filter_by(assigned_to_id=current_user().id).filter(Task.status.in_(['todo', 'in_progress'])).order_by(Task.due_date.asc()).limit(5).all() if current_user() else []
+        # Phase progress indicators
+        ms_total = Milestone.query.count()
+        ms_reached = Milestone.query.filter_by(status='reached').count()
+        tasks_total = Task.query.count()
+        tasks_done = Task.query.filter_by(status='done').count()
+        risks_total = RiskRegister.query.count()
+        risks_closed = RiskRegister.query.filter_by(status='closed').count()
+        active_projects = ResearchProject.query.filter_by(status='active').all()
+        phase_progress = {
+            'milestones': {'done': ms_reached, 'total': ms_total},
+            'tasks': {'done': tasks_done, 'total': tasks_total},
+            'risks_resolved': {'done': risks_closed, 'total': risks_total},
+        }
         return render_template('dashboard.html', stats=stats, upcoming=upcoming, meetings=meetings,
-                               risks=risks, upcoming_events=upcoming_events, my_tasks=my_tasks)
+                               risks=risks, upcoming_events=upcoming_events, my_tasks=my_tasks,
+                               phase_progress=phase_progress, active_projects=active_projects)
 
     # ── Auth ──
 

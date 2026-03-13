@@ -153,5 +153,37 @@
   </div>
   {% endif %}
 
+  <!-- Phase I progress -->
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100">
+      <div class="card-header">Phase I progress</div>
+      <div class="card-body">
+        {% for label, data in phase_progress.items() %}
+        {% set pct = ((data.done / data.total * 100)|round(0)|int) if data.total > 0 else 0 %}
+        <div class="mb-3">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="small fw-semibold">{{ label.replace('_', ' ').title() }}</span>
+            <span class="small-muted">{{ data.done }}/{{ data.total }} ({{ pct }}%)</span>
+          </div>
+          <div class="progress" style="height:8px;background:#e9ecef;border-radius:3px">
+            <div class="progress-bar" style="width:{{ pct }}%;background:{% if pct >= 80 %}#5c7c5c{% elif pct >= 40 %}#ffc107{% else %}#dc3545{% endif %};border-radius:3px"></div>
+          </div>
+        </div>
+        {% endfor %}
+        {% if active_projects %}
+        <div class="border-top pt-2 mt-1">
+          <div class="section-title mb-1">Active projects</div>
+          {% for p in active_projects %}
+          <div class="d-flex justify-content-between align-items-center py-1">
+            <a href="{{ url_for('record_detail', kind='projects', record_id=p.id) }}" class="primary-link small">{{ p.title[:35] }}{% if p.title|length > 35 %}…{% endif %}</a>
+            <span class="status-badge status-{{ p.status }}">{{ p.phase }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
