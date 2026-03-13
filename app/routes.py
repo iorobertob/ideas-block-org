@@ -1451,6 +1451,7 @@ def register_routes(app):
         project_members = ProjectMembership.query.filter_by(project_id=obj.id).all() if kind == 'projects' else []
         project_milestones = Milestone.query.filter_by(project_id=obj.id).order_by(Milestone.target_date).all() if kind == 'projects' else []
         project_tasks = Task.query.filter_by(entity_type='projects', entity_id=obj.id).order_by(Task.due_date).all() if kind == 'projects' else []
+        entity_tasks = Task.query.filter_by(entity_type=kind, entity_id=obj.id).order_by(Task.due_date).all() if kind not in ('projects',) else []
         project_budget_items = BudgetItem.query.filter_by(project_id=obj.id).order_by(BudgetItem.item_date.desc()).all() if kind == 'projects' else []
         meeting_proposals = ProposalRecord.query.filter_by(meeting_id=obj.id).order_by(ProposalRecord.id).all() if kind == 'governance' else []
         facility_equipment = Equipment.query.filter_by(facility_id=obj.id).all() if kind == 'facilities' else []
@@ -1475,7 +1476,8 @@ def register_routes(app):
                                project_budget_summary=project_budget_summary,
                                facility_equipment=facility_equipment, wg_memberships=wg_memberships,
                                attachments=attachments, audit_entries=audit_entries,
-                               all_users=all_users, now_date=date.today())
+                               all_users=all_users, now_date=date.today(),
+                               entity_tasks=entity_tasks)
 
     # ── Legacy Planning Dashboard ──
 

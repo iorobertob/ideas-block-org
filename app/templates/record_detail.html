@@ -419,6 +419,43 @@
 </div>
 {% endif %}
 
+{# ─────────── ENTITY TASKS (for governance, working_groups, events, partnerships) ─────────── #}
+{% if kind in ('governance', 'working_groups', 'events', 'partnerships') %}
+<div class="card mt-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Tasks <span class="small-muted fw-normal">({{ entity_tasks|length }})</span></span>
+    <a href="{{ url_for('tasks') }}?entity_type={{ kind }}&entity_id={{ obj.id }}" class="small-muted btn btn-sm btn-outline-secondary">+ Add task</a>
+  </div>
+  <div class="card-body {% if not entity_tasks %}{% endif %} p-0">
+    {% if entity_tasks %}
+    <table class="table table-sm mb-0">
+      <tr><th>Task</th><th>Assignee</th><th>Due</th><th>Status</th><th></th></tr>
+      {% for t in entity_tasks %}
+      <tr {% if t.status == 'done' %}style="opacity:0.55"{% endif %}>
+        <td><a href="{{ url_for('record_detail', kind='tasks', record_id=t.id) }}" class="primary-link">{{ t.title }}</a>
+          {% if t.url %}<a href="{{ t.url }}" target="_blank" rel="noopener" class="ms-1 small-muted">↗</a>{% endif %}
+        </td>
+        <td class="small-muted">{{ t.assignee.name if t.assignee else '—' }}</td>
+        <td class="small-muted">{{ t.due_date or '—' }}</td>
+        <td><span class="status-badge status-{{ t.status }}">{{ t.status.replace('_',' ') }}</span></td>
+        <td>
+          <form method="post" action="{{ url_for('update_task_status', task_id=t.id) }}" class="d-inline">
+            <input type="hidden" name="status" value="{{ 'done' if t.status != 'done' else 'todo' }}">
+            <button class="btn btn-sm btn-link p-0">{{ '✓' if t.status != 'done' else '↩' }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <div class="p-3 small-muted">No tasks linked to this {{ config.singular|lower }}.
+      <a href="{{ url_for('tasks') }}">Create one in Tasks →</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
 {# ─────────── SHARED SECTIONS: Attachments + Audit ─────────── #}
 <div class="row g-3 mt-1">
   <div class="col-md-5">
