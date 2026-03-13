@@ -446,6 +446,32 @@
 </div>
 {% endif %}
 
+{# ─────────── WORKING GROUP MEETINGS ─────────── #}
+{% if kind == 'working_groups' and wg_meetings %}
+<div class="card mt-3">
+  <div class="card-header d-flex justify-content-between">
+    Meetings
+    <a href="{{ url_for('governance') }}?wg={{ obj.id }}" class="small-muted">all →</a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <tr><th>Date</th><th>Meeting</th><th>Proposals</th><th>Decisions</th></tr>
+      {% for m in wg_meetings[:6] %}
+      <tr>
+        <td class="small-muted text-nowrap">{{ m.meeting_date }}</td>
+        <td><a href="{{ url_for('record_detail', kind='governance', record_id=m.id) }}" class="primary-link">{{ m.title }}</a></td>
+        <td class="small-muted">
+          {% set props = m.proposals.all() %}
+          {% if props %}{{ props|length }} ({{ props|selectattr('outcome','equalto','approved')|list|length }} ✓){% else %}—{% endif %}
+        </td>
+        <td class="small-muted" style="max-width:180px">{{ (m.decisions or '')[:60] }}{% if m.decisions and m.decisions|length > 60 %}…{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endif %}
+
 {# ─────────── ENTITY TASKS (for governance, working_groups, events, partnerships) ─────────── #}
 {% if kind in ('governance', 'working_groups', 'events', 'partnerships') %}
 <div class="card mt-3">

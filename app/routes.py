@@ -1488,6 +1488,7 @@ def register_routes(app):
         meeting_proposals = ProposalRecord.query.filter_by(meeting_id=obj.id).order_by(ProposalRecord.id).all() if kind == 'governance' else []
         facility_equipment = Equipment.query.filter_by(facility_id=obj.id).all() if kind == 'facilities' else []
         wg_memberships = WorkingGroupMembership.query.filter_by(wg_id=obj.id).all() if kind == 'working_groups' else []
+        wg_meetings = Meeting.query.filter_by(working_group_id=obj.id).order_by(Meeting.meeting_date.desc()).all() if kind == 'working_groups' else []
         attachments = Attachment.query.filter_by(entity_type=kind, entity_id=obj.id).order_by(Attachment.uploaded_at.desc()).all()
         audit_entries = AuditLog.query.filter_by(entity_type=kind, entity_id=obj.id).order_by(AuditLog.timestamp.desc()).limit(30).all()
         all_users = User.query.order_by(User.name).all()
@@ -1507,6 +1508,7 @@ def register_routes(app):
                                project_tasks=project_tasks, project_budget_items=project_budget_items,
                                project_budget_summary=project_budget_summary,
                                facility_equipment=facility_equipment, wg_memberships=wg_memberships,
+                               wg_meetings=wg_meetings,
                                attachments=attachments, audit_entries=audit_entries,
                                all_users=all_users, now_date=date.today(),
                                entity_tasks=entity_tasks)
