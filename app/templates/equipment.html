@@ -1,30 +1,96 @@
 {% extends 'base.html' %}{% block content %}
-<div class='row g-4'><div class='col-lg-4'><div class='card'><div class='card-body'><h3>Add equipment</h3><form method='post'>
-<input class='form-control mb-2' name='name' placeholder='Name' required>
-<input class='form-control mb-2' name='category' placeholder='Category' required>
-<div class='form-check mb-2'><input class='form-check-input' type='checkbox' name='portable' id='portable' checked><label class='form-check-label' for='portable'>Portable</label></div>
-<select class='form-select mb-2' name='status'><option>available</option><option>in_use</option><option>maintenance</option><option>reserved</option></select>
-<input class='form-control mb-2' name='owner' placeholder='Owner' value='Ideas Block / LMTA partnership'>
-<textarea class='form-control mb-2' name='transfer_plan' placeholder='Transfer plan (required for portability)'></textarea>
-<button class='btn btn-dark'>Save equipment</button></form></div></div></div>
-<div class='col-lg-8'><div class='card'><div class='card-body'><h3>Equipment inventory</h3>
-<form method='get' class='d-flex gap-2 mb-3 flex-wrap'>
-  <input class='form-control form-control-sm' style='max-width:200px' name='q' value='{{ q }}' placeholder='Search name, owner…'>
-  <select class='form-select form-select-sm' style='max-width:160px' name='category'>
-    <option value=''>All categories</option>
-    {% for c in categories %}<option value='{{ c }}' {% if c == category %}selected{% endif %}>{{ c }}</option>{% endfor %}
-  </select>
-  <select class='form-select form-select-sm' style='max-width:150px' name='status'>
-    <option value=''>All statuses</option>
-    <option value='available' {% if status=='available' %}selected{% endif %}>Available</option>
-    <option value='in_use' {% if status=='in_use' %}selected{% endif %}>In use</option>
-    <option value='maintenance' {% if status=='maintenance' %}selected{% endif %}>Maintenance</option>
-    <option value='reserved' {% if status=='reserved' %}selected{% endif %}>Reserved</option>
-  </select>
-  <button class='btn btn-sm btn-outline-secondary'>Filter</button>
-  {% if q or status or category %}<a class='btn btn-sm btn-outline-secondary' href='{{ url_for("equipment") }}'>Clear</a>{% endif %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>Equipment</h1>
+    <div class="small-muted">Portable infrastructure inventory · each item requires a transfer plan</div>
+  </div>
+  <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newEquipForm">+ Add equipment</button>
+</div>
+
+<div class="collapse mb-3" id="newEquipForm">
+<div class="card"><div class="card-body">
+<form method="post" class="row g-2">
+  <div class="col-md-4"><input class="form-control form-control-sm" name="name" placeholder="Equipment name" required></div>
+  <div class="col-md-2"><input class="form-control form-control-sm" name="category" placeholder="Category (audio, video…)" required></div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="status">
+      <option value="available">available</option>
+      <option value="in_use">in use</option>
+      <option value="maintenance">maintenance</option>
+      <option value="reserved">reserved</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="facility_id">
+      <option value="">— no facility —</option>
+      {% for f in facilities %}<option value="{{ f.id }}">{{ f.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2 d-flex align-items-center gap-2">
+    <div class="form-check mb-0">
+      <input class="form-check-input" type="checkbox" name="portable" id="portable" checked>
+      <label class="form-check-label small" for="portable">Portable</label>
+    </div>
+  </div>
+  <div class="col-md-4"><input class="form-control form-control-sm" name="owner" placeholder="Owner (institution)" value="Ideas Block / LMTA"></div>
+  <div class="col-md-6"><textarea class="form-control form-control-sm" name="transfer_plan" placeholder="Transfer plan (required: who gets this in Phase II?)" style="min-height:50px"></textarea></div>
+  <div class="col-md-2 d-flex align-items-end"><button class="btn btn-dark btn-sm w-100">Save</button></div>
 </form>
-<table class='table table-striped linked-row'><tr><th>Name</th><th>Category</th><th>Status</th><th>Portable</th></tr>
-{% for e in equipment %}<tr><td><a class='primary-link' href='{{ url_for("record_detail", kind="equipment", record_id=e.id) }}'>{{ e.name }}</a></td><td>{{ e.category }}</td><td>{{ e.status }}</td><td>{{ 'Yes' if e.portable else 'No' }}</td></tr>
-{% else %}<tr><td colspan='4'>No equipment found.</td></tr>{% endfor %}
-</table></div></div></div></div>{% endblock %}
+</div></div>
+</div>
+
+<!-- Filter -->
+<form method="get" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+  <input class="form-control form-control-sm" style="max-width:200px" name="q" value="{{ q }}" placeholder="Search name, owner…">
+  <select class="form-select form-select-sm" style="max-width:150px" name="category">
+    <option value="">All categories</option>
+    {% for c in categories %}<option value="{{ c }}" {% if c == category %}selected{% endif %}>{{ c }}</option>{% endfor %}
+  </select>
+  <select class="form-select form-select-sm" style="max-width:140px" name="status">
+    <option value="">All statuses</option>
+    <option value="available" {% if status=='available' %}selected{% endif %}>Available</option>
+    <option value="in_use" {% if status=='in_use' %}selected{% endif %}>In use</option>
+    <option value="maintenance" {% if status=='maintenance' %}selected{% endif %}>Maintenance</option>
+    <option value="reserved" {% if status=='reserved' %}selected{% endif %}>Reserved</option>
+  </select>
+  <button class="btn btn-sm btn-outline-secondary">Filter</button>
+  {% if q or status or category %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('equipment') }}">Clear</a>{% endif %}
+</form>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if equipment %}
+    <div class="table-responsive">
+    <table class="table table-hover linked-row mb-0">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Status</th>
+          <th>Portable</th>
+          <th class="hide-mobile">Facility</th>
+          <th class="hide-mobile">Owner</th>
+          <th class="hide-mobile">Transfer plan</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in equipment %}
+        <tr>
+          <td><a class="primary-link" href="{{ url_for('record_detail', kind='equipment', record_id=e.id) }}">{{ e.name }}</a></td>
+          <td><span class="agenda-pill">{{ e.category }}</span></td>
+          <td><span class="status-badge status-{{ e.status }}">{{ e.status }}</span></td>
+          <td class="small-muted">{% if e.portable %}<span class="text-success">✓</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td class="hide-mobile small-muted">{% if e.facility %}{{ e.facility.name }}{% else %}—{% endif %}</td>
+          <td class="hide-mobile small-muted">{{ e.owner or '—' }}</td>
+          <td class="hide-mobile small-muted" style="max-width:200px">{{ (e.transfer_plan or '')[:70] }}{% if e.transfer_plan and e.transfer_plan|length > 70 %}…{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="p-3 small-muted">No equipment found.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,30 +1,84 @@
 {% extends 'base.html' %}{% block content %}
-<div class='row g-4'><div class='col-lg-4'><div class='card'><div class='card-body'><h3>Log risk</h3><form method='post'>
-<input class='form-control mb-2' name='title' placeholder='Risk title' required>
-<select class='form-select mb-2' name='severity'><option>Low</option><option>Medium</option><option>High</option></select>
-<input class='form-control mb-2' name='owner' placeholder='Owner' value='{{ current_user.name }}' required>
-<textarea class='form-control mb-2' name='mitigation' placeholder='Mitigation' required></textarea>
-<select class='form-select mb-2' name='status'><option>open</option><option>monitoring</option><option>closed</option></select>
-<button class='btn btn-dark'>Save risk</button></form></div></div></div>
-<div class='col-lg-8'><div class='card'><div class='card-body'><h3>Risk register</h3>
-<form method='get' class='d-flex gap-2 mb-3 flex-wrap'>
-  <input class='form-control form-control-sm' style='max-width:220px' name='q' value='{{ q }}' placeholder='Search title, owner…'>
-  <select class='form-select form-select-sm' style='max-width:140px' name='severity'>
-    <option value=''>All severities</option>
-    <option value='High' {% if severity=='High' %}selected{% endif %}>High</option>
-    <option value='Medium' {% if severity=='Medium' %}selected{% endif %}>Medium</option>
-    <option value='Low' {% if severity=='Low' %}selected{% endif %}>Low</option>
-  </select>
-  <select class='form-select form-select-sm' style='max-width:140px' name='status'>
-    <option value=''>All statuses</option>
-    <option value='open' {% if status=='open' %}selected{% endif %}>Open</option>
-    <option value='monitoring' {% if status=='monitoring' %}selected{% endif %}>Monitoring</option>
-    <option value='closed' {% if status=='closed' %}selected{% endif %}>Closed</option>
-  </select>
-  <button class='btn btn-sm btn-outline-secondary'>Filter</button>
-  {% if q or status or severity %}<a class='btn btn-sm btn-outline-secondary' href='{{ url_for("risks") }}'>Clear</a>{% endif %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>Risk Register</h1>
+    <div class="small-muted">Identified risks, mitigations, and monitoring status</div>
+  </div>
+  <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newRiskForm">+ Log risk</button>
+</div>
+
+<div class="collapse mb-3" id="newRiskForm">
+<div class="card"><div class="card-body">
+<form method="post" class="row g-2">
+  <div class="col-md-5"><input class="form-control form-control-sm" name="title" placeholder="Risk title" required></div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="severity">
+      <option value="Low">Low</option>
+      <option value="Medium">Medium</option>
+      <option value="High">High</option>
+    </select>
+  </div>
+  <div class="col-md-3"><input class="form-control form-control-sm" name="owner" placeholder="Owner" value="{{ current_user.name }}" required></div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="status">
+      <option value="open">open</option>
+      <option value="monitoring">monitoring</option>
+      <option value="closed">closed</option>
+    </select>
+  </div>
+  <div class="col-12"><textarea class="form-control form-control-sm" name="mitigation" placeholder="Mitigation strategy" required style="min-height:60px"></textarea></div>
+  <div class="col-md-2 d-flex align-items-end"><button class="btn btn-dark btn-sm w-100">Save</button></div>
 </form>
-<table class='table table-striped linked-row'><tr><th>Risk</th><th>Severity</th><th>Owner</th><th>Status</th></tr>
-{% for r in risks %}<tr><td><a class='primary-link' href='{{ url_for("record_detail", kind="risks", record_id=r.id) }}'>{{ r.title }}</a></td><td>{{ r.severity }}</td><td>{{ r.owner }}</td><td>{{ r.status }}</td></tr>
-{% else %}<tr><td colspan='4'>No risks found.</td></tr>{% endfor %}
-</table></div></div></div></div>{% endblock %}
+</div></div>
+</div>
+
+<!-- Filter -->
+<form method="get" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+  <input class="form-control form-control-sm" style="max-width:220px" name="q" value="{{ q }}" placeholder="Search title, owner…">
+  <select class="form-select form-select-sm" style="max-width:130px" name="severity">
+    <option value="">All severities</option>
+    <option value="High" {% if severity=='High' %}selected{% endif %}>High</option>
+    <option value="Medium" {% if severity=='Medium' %}selected{% endif %}>Medium</option>
+    <option value="Low" {% if severity=='Low' %}selected{% endif %}>Low</option>
+  </select>
+  <select class="form-select form-select-sm" style="max-width:130px" name="status">
+    <option value="">All statuses</option>
+    <option value="open" {% if status=='open' %}selected{% endif %}>Open</option>
+    <option value="monitoring" {% if status=='monitoring' %}selected{% endif %}>Monitoring</option>
+    <option value="closed" {% if status=='closed' %}selected{% endif %}>Closed</option>
+  </select>
+  <button class="btn btn-sm btn-outline-secondary">Filter</button>
+  {% if q or status or severity %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('risks') }}">Clear</a>{% endif %}
+</form>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if risks %}
+    <table class="table table-hover linked-row mb-0">
+      <thead>
+        <tr>
+          <th>Risk</th>
+          <th>Severity</th>
+          <th class="hide-mobile">Owner</th>
+          <th>Status</th>
+          <th class="hide-mobile">Mitigation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in risks %}
+        <tr>
+          <td><a class="primary-link" href="{{ url_for('record_detail', kind='risks', record_id=r.id) }}">{{ r.title }}</a></td>
+          <td><span class="status-badge severity-{{ r.severity }}">{{ r.severity }}</span></td>
+          <td class="hide-mobile small-muted">{{ r.owner }}</td>
+          <td><span class="status-badge status-{{ r.status }}">{{ r.status }}</span></td>
+          <td class="hide-mobile small" style="max-width:300px;color:#555">{{ (r.mitigation or '')[:100] }}{% if r.mitigation and r.mitigation|length > 100 %}…{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="p-3 small-muted">No risks found. {% if q or status or severity %}<a href="{{ url_for('risks') }}">Clear filters</a>{% else %}Log the first risk above.{% endif %}</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

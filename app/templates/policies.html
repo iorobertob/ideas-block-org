@@ -1,9 +1,44 @@
 {% extends 'base.html' %}{% block content %}
-<div class='row g-4'><div class='col-lg-4'><div class='card'><div class='card-body'><h3>Add policy</h3><form method='post'>
-<input class='form-control mb-2' name='title' placeholder='Title' required>
-<input class='form-control mb-2' name='category' placeholder='Category' required>
-<input class='form-control mb-2' name='version' placeholder='Version' value='1.0'>
-<textarea class='form-control mb-2' name='content' placeholder='Policy content' required></textarea>
-<button class='btn btn-dark'>Save policy</button></form></div></div></div>
-<div class='col-lg-8'><div class='card'><div class='card-body'><h3>Policy library</h3><table class='table table-striped linked-row'><tr><th>Title</th><th>Category</th><th>Version</th></tr>{% for p in policies %}<tr><td><a class='primary-link' href='{{ url_for("record_detail", kind="policies", record_id=p.id) }}'>{{ p.title }}</a></td><td>{{ p.category }}</td><td>{{ p.version }}</td></tr>{% endfor %}</table></div></div></div></div>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>Policies</h1>
+    <div class="small-muted">Operational and governance policy documents</div>
+  </div>
+  <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newPolicyForm">+ Add policy</button>
+</div>
+
+<div class="collapse mb-3" id="newPolicyForm">
+<div class="card"><div class="card-body">
+<form method="post" class="row g-2">
+  <div class="col-md-4"><input class="form-control form-control-sm" name="title" placeholder="Policy title" required></div>
+  <div class="col-md-2"><input class="form-control form-control-sm" name="category" placeholder="Category (operations, research…)" required></div>
+  <div class="col-md-1"><input class="form-control form-control-sm" name="version" placeholder="Version" value="1.0"></div>
+  <div class="col-md-1"><button class="btn btn-dark btn-sm w-100">Save</button></div>
+  <div class="col-12"><textarea class="form-control form-control-sm" name="content" placeholder="Policy content" required style="min-height:80px"></textarea></div>
+</form>
+</div></div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if policies %}
+    {% for p in policies %}
+    <div class="p-3 border-bottom">
+      <div class="d-flex justify-content-between align-items-start mb-1">
+        <a href="{{ url_for('record_detail', kind='policies', record_id=p.id) }}" class="primary-link fw-semibold">{{ p.title }}</a>
+        <div class="d-flex gap-2 align-items-center">
+          <span class="agenda-pill">{{ p.category }}</span>
+          <span class="small-muted">v{{ p.version }}</span>
+        </div>
+      </div>
+      {% if p.content %}
+      <div class="small mt-1" style="color:#555;white-space:pre-wrap">{{ p.content[:250] }}{% if p.content|length > 250 %}… <a href="{{ url_for('record_detail', kind='policies', record_id=p.id) }}" class="ms-1">read more</a>{% endif %}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="p-3 small-muted">No policies yet. Document the first governance policy above.</div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

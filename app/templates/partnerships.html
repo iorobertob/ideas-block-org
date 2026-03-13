@@ -1,18 +1,105 @@
 {% extends 'base.html' %}{% block content %}
-<div class='row g-4'><div class='col-lg-4'>
-<div class='card mb-4'><div class='card-body'><h3>Add institution</h3><form method='post'><input type='hidden' name='form_name' value='institution'>
-<input class='form-control mb-2' name='name' placeholder='Institution name' required>
-<input class='form-control mb-2' name='category' placeholder='Category' required>
-<input class='form-control mb-2' name='contact_person' placeholder='Contact person'>
-<input class='form-control mb-2' name='contact_email' type='email' placeholder='Contact email'>
-<textarea class='form-control mb-2' name='notes' placeholder='Notes'></textarea>
-<button class='btn btn-dark'>Save institution</button></form></div></div>
-<div class='card'><div class='card-body'><h3>Add partnership</h3><form method='post'><input type='hidden' name='form_name' value='partnership'>
-<select class='form-select mb-2' name='institution_id'>{% for i in institutions %}<option value='{{ i.id }}'>{{ i.name }}</option>{% endfor %}</select>
-<select class='form-select mb-2' name='status'><option>prospective</option><option>active</option><option>closed</option></select>
-<textarea class='form-control mb-2' name='objective' placeholder='Objective' required></textarea>
-<textarea class='form-control mb-2' name='requested_support' placeholder='Requested support'></textarea>
-<input class='form-control mb-2' name='timeline' placeholder='Timeline'>
-<button class='btn btn-dark'>Save partnership</button></form></div></div></div>
-<div class='col-lg-8'><div class='card mb-4'><div class='card-body'><h3>Institutions</h3><table class='table table-striped linked-row'><tr><th>Name</th><th>Category</th><th>Contact</th></tr>{% for i in institutions %}<tr><td><a class='primary-link' href='{{ url_for("record_detail", kind="institutions", record_id=i.id) }}'>{{ i.name }}</a></td><td>{{ i.category }}</td><td>{{ i.contact_person }}</td></tr>{% endfor %}</table></div></div><div class='card'><div class='card-body'><h3>Partnership map</h3><table class='table table-striped linked-row'><tr><th>Institution</th><th>Status</th><th>Objective</th></tr>{% for p in partnerships %}<tr><td><a class='primary-link' href='{{ url_for("record_detail", kind="partnerships", record_id=p.id) }}'>{{ p.institution.name }}</a></td><td>{{ p.status }}</td><td>{{ p.objective }}</td></tr>{% endfor %}</table></div></div></div>
-</div>{% endblock %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>Partnerships</h1>
+    <div class="small-muted">Institutional relationships and partnership development pipeline</div>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#newInstitutionForm">+ Institution</button>
+    <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newPartnershipForm">+ Partnership</button>
+  </div>
+</div>
+
+<div class="collapse mb-2" id="newInstitutionForm">
+<div class="card mb-2"><div class="card-body">
+<h6 class="mb-2">New institution</h6>
+<form method="post" class="row g-2">
+  <input type="hidden" name="form_name" value="institution">
+  <div class="col-md-4"><input class="form-control form-control-sm" name="name" placeholder="Institution name" required></div>
+  <div class="col-md-2"><input class="form-control form-control-sm" name="category" placeholder="Category (academic, funder…)" required></div>
+  <div class="col-md-2"><input class="form-control form-control-sm" name="contact_person" placeholder="Contact person"></div>
+  <div class="col-md-3"><input class="form-control form-control-sm" type="email" name="contact_email" placeholder="Contact email"></div>
+  <div class="col-md-1"><button class="btn btn-dark btn-sm w-100">Save</button></div>
+  <div class="col-12"><textarea class="form-control form-control-sm" name="notes" placeholder="Notes" style="min-height:50px"></textarea></div>
+</form>
+</div></div>
+</div>
+
+<div class="collapse mb-3" id="newPartnershipForm">
+<div class="card mb-2"><div class="card-body">
+<h6 class="mb-2">New partnership</h6>
+<form method="post" class="row g-2">
+  <input type="hidden" name="form_name" value="partnership">
+  <div class="col-md-4">
+    <select class="form-select form-select-sm" name="institution_id">
+      {% for i in institutions %}<option value="{{ i.id }}">{{ i.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select form-select-sm" name="status">
+      <option value="prospective">Prospective</option>
+      <option value="active">Active</option>
+      <option value="closed">Closed</option>
+    </select>
+  </div>
+  <div class="col-md-3"><input class="form-control form-control-sm" name="timeline" placeholder="Timeline (e.g. 2026–2029)"></div>
+  <div class="col-md-1"><button class="btn btn-dark btn-sm w-100">Save</button></div>
+  <div class="col-md-6"><textarea class="form-control form-control-sm" name="objective" placeholder="Partnership objective" required style="min-height:55px"></textarea></div>
+  <div class="col-md-6"><textarea class="form-control form-control-sm" name="requested_support" placeholder="Requested support" style="min-height:55px"></textarea></div>
+</form>
+</div></div>
+</div>
+
+<div class="row g-3">
+  <!-- Partnerships -->
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header">Partnership pipeline</div>
+      <div class="card-body p-0">
+        {% if partnerships %}
+        {% for p in partnerships %}
+        <div class="p-3 border-bottom">
+          <div class="d-flex justify-content-between align-items-start mb-1">
+            <a href="{{ url_for('record_detail', kind='partnerships', record_id=p.id) }}" class="primary-link fw-semibold">{{ p.institution.name }}</a>
+            <span class="status-badge status-{{ p.status }}">{{ p.status }}</span>
+          </div>
+          {% if p.objective %}<p class="small mb-1" style="color:#444">{{ p.objective[:150] }}{% if p.objective|length > 150 %}…{% endif %}</p>{% endif %}
+          <div class="small-muted d-flex gap-3 flex-wrap">
+            {% if p.timeline %}<span>{{ p.timeline }}</span>{% endif %}
+            {% if p.requested_support %}<span>{{ p.requested_support[:60] }}{% if p.requested_support|length > 60 %}…{% endif %}</span>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="p-3 small-muted">No partnerships yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Institutions -->
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-header">Institutions ({{ institutions|length }})</div>
+      <div class="card-body p-0">
+        {% if institutions %}
+        <table class="table table-hover linked-row mb-0">
+          <thead><tr><th>Institution</th><th>Category</th><th class="hide-mobile">Contact</th></tr></thead>
+          <tbody>
+            {% for i in institutions %}
+            <tr>
+              <td><a class="primary-link" href="{{ url_for('record_detail', kind='institutions', record_id=i.id) }}">{{ i.name }}</a></td>
+              <td class="small-muted">{{ i.category }}</td>
+              <td class="hide-mobile small-muted">{{ i.contact_person or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="p-3 small-muted">No institutions yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

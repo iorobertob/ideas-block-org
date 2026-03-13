@@ -1,7 +1,49 @@
 {% extends 'base.html' %}{% block content %}
-<div class='row g-4'><div class='col-lg-4'><div class='card'><div class='card-body'><h3>Create monthly report</h3><p class='small-muted'>Current month activity snapshot: {{ month_bookings }} bookings, {{ month_events }} dissemination events.</p><form method='post'>
-<input class='form-control mb-2' name='month' placeholder='YYYY-MM' required>
-<textarea class='form-control mb-2' name='summary' placeholder='Summary' required></textarea>
-<button class='btn btn-dark'>Save report</button></form></div></div></div>
-<div class='col-lg-8'><div class='card'><div class='card-body'><h3>Reports archive</h3><table class='table table-striped linked-row'><tr><th>Month</th><th>Created</th><th>Summary</th></tr>{% for r in reports %}<tr><td><a class='primary-link' href='{{ url_for("record_detail", kind="reports", record_id=r.id) }}'>{{ r.month }}</a></td><td>{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ r.summary[:120] }}{% if r.summary|length > 120 %}...{% endif %}</td></tr>{% else %}<tr><td colspan='3'>No reports yet.</td></tr>{% endfor %}</table></div></div></div></div>
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>Monthly Reports</h1>
+    <div class="small-muted">Activity snapshots for institutional reporting and accountability</div>
+  </div>
+  <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newReportForm">+ New report</button>
+</div>
+
+<div class="collapse mb-3" id="newReportForm">
+<div class="card"><div class="card-body">
+<div class="alert alert-light border py-2 small mb-3">
+  This month's activity: <strong>{{ month_bookings }}</strong> booking{{ 's' if month_bookings != 1 }}, <strong>{{ month_events }}</strong> dissemination event{{ 's' if month_events != 1 }}.
+</div>
+<form method="post" class="row g-2">
+  <div class="col-md-3"><input class="form-control form-control-sm" name="month" placeholder="YYYY-MM" required></div>
+  <div class="col-md-1"><button class="btn btn-dark btn-sm w-100">Save</button></div>
+  <div class="col-12"><textarea class="form-control form-control-sm" name="summary" placeholder="Summary — key activities, outputs, governance decisions, open issues" required style="min-height:100px"></textarea></div>
+</form>
+</div></div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if reports %}
+    <table class="table table-hover linked-row mb-0">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Created</th>
+          <th>Summary</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reports %}
+        <tr>
+          <td class="fw-semibold"><a class="primary-link" href="{{ url_for('record_detail', kind='reports', record_id=r.id) }}">{{ r.month }}</a></td>
+          <td class="small-muted text-nowrap">{{ r.created_at.strftime('%Y-%m-%d') }}</td>
+          <td class="small" style="max-width:500px">{{ r.summary[:200] }}{% if r.summary|length > 200 %}…{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="p-3 small-muted">No reports yet. Create the first monthly report above.</div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}
