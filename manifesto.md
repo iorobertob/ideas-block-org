@@ -1,10 +1,10 @@
-LMTA Mokslo centras – Ideas Block Kompresorinė
+Ideas Block Kompresorinė
 Artistic Research Satellite (2026–2029)
 Executive Brief, Concept Proposal, and Kompresorinė Protocol
 
 
 1. Executive Brief
-This document proposes a collaboration between the LMTA Mokslo centras (Science and Research Centre) and Ideas Block – Kompresorinė to establish a temporary artistic research platform operating for a three-year period (2026–2029).
+This document proposes a collaboration between the LMTA (Innovation and Research efforts) and Ideas Block – Kompresorinė to establish a temporary artistic research platform operating for a three-year period (2026–2029).
 
 The platform would function as an external artistic research satellite supporting practice-led inquiry, rehearsal-as-research, experimentation, prototyping, and research dissemination.
 

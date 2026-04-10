@@ -178,7 +178,7 @@ def seed_if_empty():
             created_by_id=director_id),
         ConstitutionDocument(title='Governance Constitution v1.0', category='constitution', version='1.0', status='active',
             effective_date=date(2026, 1, 15),
-            content='This document establishes the governance structure of Kompresorinė for Phase I (2026–2028). Authority is shared between LMTA Mokslo centras (institutional anchor) and Ideas Block (operational management). Decisions affecting research priorities, budgets over €5,000, and Phase II planning require steering group approval. Day-to-day operational decisions rest with the coordinator.',
+            content='This document establishes the governance structure of Kompresorinė for Phase I (2026–2028). Authority is shared between MTA (institutional anchor and partnership) and Ideas Block (operational management). Decisions affecting research priorities, budgets over €5,000, and Phase II planning require steering group approval. Day-to-day operational decisions rest with the coordinator.',
             created_by_id=director_id),
         ConstitutionDocument(title='Core Research Values', category='values', version='1.0', status='active',
             effective_date=date(2026, 1, 15),
