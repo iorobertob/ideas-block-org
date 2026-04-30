@@ -37,6 +37,10 @@ def login_required():
     return current_user() is not None
 
 
+def _login_redirect():
+    return redirect(url_for('login', next=request.path))
+
+
 def is_manager(user=None):
     user = user or current_user()
     return bool(user and user.role in {'admin', 'director', 'coordinator'})
@@ -604,7 +608,7 @@ def register_routes(app):
     @app.route('/')
     def index():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         income = db.session.query(func.coalesce(func.sum(BudgetItem.amount), 0)).filter_by(direction='income').scalar()
         expense = db.session.query(func.coalesce(func.sum(BudgetItem.amount), 0)).filter_by(direction='expense').scalar()
         overdue_count = Task.query.filter(
@@ -664,9 +668,12 @@ def register_routes(app):
             if user and user.check_password(password):
                 session['user_id'] = user.id
                 flash('Welcome back.', 'success')
+                next_url = request.form.get('next', '').strip()
+                if next_url and next_url.startswith('/') and not next_url.startswith('//'):
+                    return redirect(next_url)
                 return redirect(url_for('index'))
             flash('Invalid credentials.', 'danger')
-        return render_template('login.html')
+        return render_template('login.html', next=request.args.get('next', ''))
 
     @app.route('/logout')
     def logout():
@@ -679,7 +686,7 @@ def register_routes(app):
     @app.route('/users', methods=['GET', 'POST'])
     def users():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             if not is_manager():
                 flash('You do not have permission to create users.', 'danger')
@@ -693,7 +700,7 @@ def register_routes(app):
     @app.route('/projects', methods=['GET', 'POST'])
     def projects():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('projects')
             return redirect(url_for('projects'))
@@ -722,7 +729,7 @@ def register_routes(app):
     @app.route('/projects/<int:project_id>/add-member', methods=['POST'])
     def add_project_member(project_id):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         project = db.session.get(ResearchProject, project_id)
         if not project:
             abort(404)
@@ -748,7 +755,7 @@ def register_routes(app):
     @app.route('/projects/<int:project_id>/add-milestone', methods=['POST'])
     def add_milestone(project_id):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         m = Milestone(
             project_id=project_id,
             title=request.form.get('title', ''),
@@ -767,7 +774,7 @@ def register_routes(app):
     @app.route('/bookings', methods=['GET', 'POST'])
     def bookings():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('bookings')
             return redirect(url_for('bookings'))
@@ -791,7 +798,7 @@ def register_routes(app):
     @app.route('/bookings/calendar')
     def booking_calendar():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         today = date.today()
         year = int(request.args.get('year', today.year))
         month = int(request.args.get('month', today.month))
@@ -820,7 +827,7 @@ def register_routes(app):
     @app.route('/equipment', methods=['GET', 'POST'])
     def equipment():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('equipment')
             return redirect(url_for('equipment'))
@@ -849,7 +856,7 @@ def register_routes(app):
     @app.route('/facilities', methods=['GET', 'POST'])
     def facilities():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('facilities')
             return redirect(url_for('facilities'))
@@ -861,7 +868,7 @@ def register_routes(app):
     @app.route('/budget', methods=['GET', 'POST'])
     def budget():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('budget')
             return redirect(url_for('budget'))
@@ -888,7 +895,7 @@ def register_routes(app):
     @app.route('/governance', methods=['GET', 'POST'])
     def governance():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('governance')
             return redirect(url_for('governance'))
@@ -906,7 +913,7 @@ def register_routes(app):
     @app.route('/partnerships', methods=['GET', 'POST'])
     def partnerships():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             form_name = request.form['form_name']
             create_record('institutions' if form_name == 'institution' else 'partnerships')
@@ -920,7 +927,7 @@ def register_routes(app):
     @app.route('/protocol', methods=['GET', 'POST'])
     def protocol():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('protocol')
             return redirect(url_for('protocol'))
@@ -931,7 +938,7 @@ def register_routes(app):
     @app.route('/policies', methods=['GET', 'POST'])
     def policies():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('policies')
             return redirect(url_for('policies'))
@@ -943,7 +950,7 @@ def register_routes(app):
     @app.route('/risks', methods=['GET', 'POST'])
     def risks():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('risks')
             return redirect(url_for('risks'))
@@ -966,7 +973,7 @@ def register_routes(app):
     @app.route('/roadmap', methods=['GET', 'POST'])
     def roadmap():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('roadmap')
             return redirect(url_for('roadmap'))
@@ -976,7 +983,7 @@ def register_routes(app):
     @app.route('/roadmap/timeline')
     def roadmap_timeline():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         items = RoadmapItem.query.order_by(RoadmapItem.year.asc(), RoadmapItem.phase.asc()).all()
         years = sorted(set(i.year for i in items)) if items else [date.today().year]
         # Group by year
@@ -990,7 +997,7 @@ def register_routes(app):
     @app.route('/events', methods=['GET', 'POST'])
     def events():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('events')
             return redirect(url_for('events'))
@@ -1001,7 +1008,7 @@ def register_routes(app):
     @app.route('/events/calendar')
     def events_calendar():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         today = date.today()
         year = int(request.args.get('year', today.year))
         month = int(request.args.get('month', today.month))
@@ -1075,7 +1082,7 @@ def register_routes(app):
     @app.route('/reports', methods=['GET', 'POST'])
     def reports():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('reports')
             return redirect(url_for('reports'))
@@ -1171,7 +1178,7 @@ def register_routes(app):
     @app.route('/working-groups', methods=['GET', 'POST'])
     def working_groups():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('working_groups')
             return redirect(url_for('working_groups'))
@@ -1182,7 +1189,7 @@ def register_routes(app):
     @app.route('/working-groups/<int:wg_id>/add-member', methods=['POST'])
     def add_wg_member(wg_id):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         wg = db.session.get(WorkingGroup, wg_id)
         if not wg:
             abort(404)
@@ -1210,7 +1217,7 @@ def register_routes(app):
     @app.route('/tasks', methods=['GET', 'POST'])
     def tasks():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             t = Task(
                 title=request.form.get('title', ''),
@@ -1277,7 +1284,7 @@ def register_routes(app):
     @app.route('/tasks/<int:task_id>/status', methods=['POST'])
     def update_task_status(task_id):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         t = db.session.get(Task, task_id)
         if t:
             t.status = request.form.get('status', t.status)
@@ -1289,7 +1296,7 @@ def register_routes(app):
     @app.route('/constitution', methods=['GET', 'POST'])
     def constitution():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('constitution')
             return redirect(url_for('constitution'))
@@ -1305,14 +1312,14 @@ def register_routes(app):
     @app.route('/polls', methods=['GET', 'POST'])
     def polls():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         return render_template('polls.html',
                                polls=Poll.query.order_by(Poll.id.desc()).all())
 
     @app.route('/polls/new', methods=['GET', 'POST'])
     def polls_new():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             is_pub = 'is_public' in request.form
             pub_token = uuid.uuid4().hex if is_pub else None
@@ -1341,7 +1348,7 @@ def register_routes(app):
     @app.route('/polls/<int:poll_id>', methods=['GET', 'POST'])
     def poll_detail(poll_id):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         poll = db.session.get(Poll, poll_id)
         if not poll:
             abort(404)
@@ -1447,7 +1454,7 @@ def register_routes(app):
     @app.route('/audit')
     def audit():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if not is_manager():
             flash('Access denied.', 'danger')
             return redirect(url_for('index'))
@@ -1467,7 +1474,7 @@ def register_routes(app):
     @app.route('/journal')
     def journal():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         project_id = request.args.get('project', '')
         q = request.args.get('q', '').strip()
         query = ResearchSession.query
@@ -1492,7 +1499,7 @@ def register_routes(app):
     @app.route('/sessions', methods=['POST'])
     def sessions():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         try:
             project_id = int(request.form['project_id'])
         except (ValueError, KeyError):
@@ -1518,7 +1525,7 @@ def register_routes(app):
     @app.route('/proposals', methods=['POST'])
     def proposals():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         try:
             meeting_id = int(request.form['meeting_id'])
         except (ValueError, KeyError):
@@ -1546,7 +1553,7 @@ def register_routes(app):
     @app.route('/records/<kind>/<int:record_id>/upload', methods=['POST'])
     def upload_attachment(kind, record_id):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         config = RECORD_CONFIG.get(kind)
         if not config:
             abort(404)
@@ -1576,7 +1583,7 @@ def register_routes(app):
     @app.route('/uploads/<filename>')
     def uploaded_file(filename):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         upload_dir = os.path.join(app.instance_path, 'uploads')
         return send_from_directory(upload_dir, filename)
 
@@ -1585,7 +1592,7 @@ def register_routes(app):
     @app.route('/records/<kind>/<int:record_id>', methods=['GET', 'POST'])
     def record_detail(kind, record_id):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         config = RECORD_CONFIG.get(kind)
         if not config:
             abort(404)
@@ -1687,7 +1694,7 @@ def register_routes(app):
     @app.route('/legacy', methods=['GET', 'POST'])
     def legacy():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             create_record('legacy_tasks')
             db.session.commit()
@@ -1735,7 +1742,7 @@ def register_routes(app):
     @app.route('/legacy/<int:task_id>/status', methods=['POST'])
     def legacy_task_status(task_id):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         task = db.session.get(LegacyTask, task_id)
         if not task:
             abort(404)
@@ -1752,7 +1759,7 @@ def register_routes(app):
     @app.route('/health')
     def health():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         today = date.today()
 
         # Stale projects (active, no session in 30+ days, or never)
@@ -1853,7 +1860,7 @@ def register_routes(app):
     @app.route('/records/governance/<int:record_id>/print')
     def print_meeting(record_id):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         m = db.session.get(Meeting, record_id)
         if not m:
             abort(404)
@@ -1863,7 +1870,7 @@ def register_routes(app):
     @app.route('/records/projects/<int:record_id>/print')
     def print_project(record_id):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         p = db.session.get(ResearchProject, record_id)
         if not p:
             abort(404)
@@ -1875,7 +1882,7 @@ def register_routes(app):
     @app.route('/records/reports/<int:record_id>/print')
     def print_report(record_id):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         report = db.session.get(MonthlyReport, record_id)
         if not report:
             abort(404)
@@ -1887,7 +1894,7 @@ def register_routes(app):
     @app.route('/search')
     def search():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         q = request.args.get('q', '').strip()
         if not q or len(q) < 2:
             return render_template('search.html', q=q, results={}, total=0)
@@ -1967,7 +1974,7 @@ def register_routes(app):
     @app.route('/calls', methods=['GET', 'POST'])
     def calls():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         if request.method == 'POST':
             if not is_manager():
                 abort(403)
@@ -2025,7 +2032,7 @@ def register_routes(app):
     @app.route('/calls/<int:call_id>', methods=['GET', 'POST'])
     def call_detail(call_id):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         call = db.session.get(CallForSubmission, call_id)
         if not call:
             abort(404)
@@ -2061,7 +2068,7 @@ def register_routes(app):
     @app.route('/calls/<int:call_id>/subscribe', methods=['POST'])
     def call_subscribe(call_id):
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         call = db.session.get(CallForSubmission, call_id)
         if not call:
             abort(404)
@@ -2227,7 +2234,7 @@ def register_routes(app):
     @app.route('/about')
     def about():
         if not login_required():
-            return redirect(url_for('login'))
+            return _login_redirect()
         live_stats = {
             'active_projects': ResearchProject.query.filter_by(status='active').count(),
             'research_sessions': ResearchSession.query.count(),

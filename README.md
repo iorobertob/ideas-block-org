@@ -16,13 +16,15 @@ A working Flask web application that turns the LMTA + Ideas Block – Kompresori
 - Phase I / Phase II roadmap tracker
 - public dissemination event tracker
 - monthly reports archive
+- calls & deadlines tracker (conferences, journals, festivals, residencies) with subscription and email reminders
 
 ## Tech stack
 
 - Python 3
 - Flask
 - Flask-SQLAlchemy
-- SQLite
+- Flask-Migrate (Alembic — schema migrations)
+- SQLite (default) — switchable to PostgreSQL via `DATABASE_URL` env var
 - Bootstrap 5
 
 ## Quick start
@@ -36,56 +38,127 @@ python app.py
 
 Then open:
 
-```text
-http://127.0.0.1:5000
 ```
+http://127.0.0.1:5004
+```
+
+The database is created automatically on first run at `instance/kompresorine.db` and seeded with demo data.
 
 ## Demo accounts
 
-- `admin@example.com` / `admin123`
-- `director@example.com` / `director123`
-- `coordinator@example.com` / `coord123`
-- `researcher@example.com` / `research123`
+| Email | Password | Role |
+|---|---|---|
+| `admin@example.com` | `admin123` | Admin |
+| `director@example.com` | `director123` | Director |
+| `coordinator@example.com` | `coord123` | Coordinator |
+| `researcher@example.com` | `research123` | Member |
+
+## Environment variables
+
+All optional — the app runs with defaults if none are set.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DATABASE_URL` | SQLite in `instance/` | Override to use PostgreSQL: `postgresql://user:pass@host/dbname` |
+| `MAIL_SERVER` | _(empty — console logging)_ | SMTP host for email notifications |
+| `MAIL_PORT` | `587` | SMTP port |
+| `MAIL_USE_TLS` | `1` | Set to `0` to disable TLS |
+| `MAIL_USERNAME` | _(empty)_ | SMTP login |
+| `MAIL_PASSWORD` | _(empty)_ | SMTP password |
+| `MAIL_FROM` | `noreply@kompresorine.local` | Sender address |
+
+## Schema migrations
+
+The project uses **Flask-Migrate** (Alembic) for schema changes. The database is always at `instance/kompresorine.db` (SQLite) or wherever `DATABASE_URL` points.
+
+### Making a schema change
+
+1. Edit `app/models.py` to add/modify a column or table.
+2. Generate a migration:
+   ```bash
+   FLASK_APP=app.py flask db migrate -m "short description of change"
+   ```
+3. Review the generated file in `migrations/versions/`.
+4. Apply it:
+   ```bash
+   FLASK_APP=app.py flask db upgrade
+   ```
+
+### On the production server (after pulling new code)
+
+```bash
+FLASK_APP=app.py flask db upgrade
+```
+
+This is the only command needed after a deploy that includes schema changes. It is idempotent — safe to run even if the DB is already up to date.
+
+### Other useful commands
+
+```bash
+# Check current migration version
+FLASK_APP=app.py flask db current
+
+# Show pending migrations
+FLASK_APP=app.py flask db heads
+
+# Downgrade one step (use with care on production)
+FLASK_APP=app.py flask db downgrade
+```
+
+### Migrating to PostgreSQL
+
+The ORM models are backend-agnostic. To switch:
+
+1. Install the PostgreSQL driver:
+   ```bash
+   pip install psycopg2-binary
+   ```
+2. Set the environment variable before starting the app:
+   ```bash
+   export DATABASE_URL=postgresql://user:pass@localhost/kompresorine
+   ```
+3. Run migrations to create the schema on the new DB:
+   ```bash
+   FLASK_APP=app.py flask db upgrade
+   ```
+4. Migrate existing data with `pgloader` (handles SQLite → PostgreSQL type translation automatically):
+   ```bash
+   pgloader sqlite:///instance/kompresorine.db postgresql://user:pass@localhost/kompresorine
+   ```
+
+> **Use PostgreSQL, not MySQL/MariaDB.** The query layer uses `nullslast()` ordering which works natively in PostgreSQL but not in MySQL.
 
 ## File structure
 
-```text
-kompresorine_platform/
-├── app.py
+```
+ORG_GOVERNANCE_V2/
+├── app.py                  # entry point — flask run target
 ├── requirements.txt
 ├── README.md
-├── instance/
+├── migrate.sh              # legacy — kept for reference only, do not use
+├── instance/               # git-ignored — runtime files
+│   └── kompresorine.db     # SQLite database (auto-created)
+├── migrations/             # Alembic migration history — committed to git
+│   └── versions/
 └── app/
-    ├── __init__.py
-    ├── models.py
-    ├── routes.py
-    ├── seed.py
+    ├── __init__.py         # app factory + Flask-Migrate init
+    ├── models.py           # SQLAlchemy models
+    ├── routes.py           # all routes
+    ├── seed.py             # demo data seeding
     └── templates/
 ```
 
-## Notes
-
-This is a real local web app, not just mockup screens. It is intended as a strong prototype / MVP that you can extend into a production platform with richer permissions, file uploads, email notifications, and analytics.
-
-
-## Important upgrade note
-
-This version adds record-detail pages and owner-based editing. Delete any old SQLite database before first run so the new schema is created:
-
-```bash
-rm -f instance/kompresorine.db
-```
-
 ## TODOs
-- There should also be predefined formats/types on the events. Options areset by the admin dashboard: exhibitions, concerts, talk, workshop, discussion, colloquia, staff meeting, other. and the capacity to add, edit or remove these types. 
+
+- There should also be predefined formats/types on the events. Options are set by the admin dashboard: exhibitions, concerts, talk, workshop, discussion, colloquia, staff meeting, other. and the capacity to add, edit or remove these types.
 - In budget, capability to save, categorise and archive per rubric and time and project and executer, invoices both outgoing or incoming.
-- Beautify the whole interface to make it more calling to use by having a more modern, contemporary, aesthetic, minimalistic , state of the art UX and UI. 
-- Journal entries, should be able to be expanded into their own page with detailed information when clicking on them from wherever they are listed. 
-- add UX and UI for file uploads to say show to the user the upload progress. On file download link/icon show the size of the file. 
-- uploaded files to journal sessions should be shown in the listing of the session or its card, so user can quickly clidk and open them. 
-- the +log session, or + New meeting, or +New Working group,  in the projects or in the governance, or anywhere needed,  should open a richer page where to create a new entry, with all the fields and file upload ux available.
-- capatility to upload files to working groups, meetings, sessions and projects, or all relevant items.  
-- Participants on the logged sessions should be able to be selected in the text box from the regiestered useres in teh platform by using a type and autocomplete UX, but also be able to be typed in, in case they are not registered in the platform. 
-- There should be UX and UI for establishing governance and working groups periodic meetings, with all the required fields for good governance practice. 
-- relate voting to projects, meetins, journal sessions, and working gropus, and to be able to launche them from there
-- items and facilities should be able to be booked from the list where they appear or from their detail page
+- Beautify the whole interface to make it more calling to use by having a more modern, contemporary, aesthetic, minimalistic, state of the art UX and UI.
+- Journal entries, should be able to be expanded into their own page with detailed information when clicking on them from wherever they are listed.
+- add UX and UI for file uploads to say show to the user the upload progress. On file download link/icon show the size of the file.
+- uploaded files to journal sessions should be shown in the listing of the session or its card, so user can quickly click and open them.
+- the +log session, or + New meeting, or +New Working group, in the projects or in the governance, or anywhere needed, should open a richer page where to create a new entry, with all the fields and file upload ux available.
+- capability to upload files to working groups, meetings, sessions and projects, or all relevant items.
+- Participants on the logged sessions should be able to be selected in the text box from the registered users in the platform by using a type and autocomplete UX, but also be able to be typed in, in case they are not registered in the platform.
+- There should be UX and UI for establishing governance and working groups periodic meetings, with all the required fields for good governance practice.
+- relate voting to projects, meetings, journal sessions, and working groups, and to be able to launch them from there.
+- items and facilities should be able to be booked from the list where they appear or from their detail page.

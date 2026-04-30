@@ -1,6 +1,7 @@
 from flask import Flask
 from .models import db
 from .routes import register_routes
+from flask_migrate import Migrate
 import os
 
 
@@ -8,7 +9,10 @@ def create_app():
     app = Flask(__name__, instance_relative_config=True)
     os.makedirs(app.instance_path, exist_ok=True)
     app.config['SECRET_KEY'] = 'dev-secret-key-change-me'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'kompresorine.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+        'DATABASE_URL',
+        'sqlite:///' + os.path.join(app.instance_path, 'kompresorine.db')
+    )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', '')
     app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
@@ -17,6 +21,7 @@ def create_app():
     app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
     app.config['MAIL_FROM'] = os.environ.get('MAIL_FROM', 'noreply@kompresorine.local')
     db.init_app(app)
+    Migrate(app, db)
     register_routes(app)
     with app.app_context():
         db.create_all()

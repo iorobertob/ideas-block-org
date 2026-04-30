@@ -44,6 +44,7 @@
     {% endwith %}
 
     <form method="post">
+      <input type="hidden" name="next" value="{{ next }}">
       <div class="mb-3">
         <label class="form-label small fw-semibold">Email</label>
         <input class="form-control" name="email" type="email" required autocomplete="email">
