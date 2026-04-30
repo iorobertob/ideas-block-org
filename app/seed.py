@@ -4,16 +4,175 @@ from .models import (
     ProtocolRule, DisseminationEvent, ResearchSession, ProposalRecord,
     Facility, WorkingGroup, WorkingGroupMembership, ProjectMembership,
     Milestone, Task, ConstitutionDocument, Poll, PollOption, PollVote, PollToken,
-    LegacyTask
+    LegacyTask, CallForSubmission
 )
 from datetime import datetime, date, timedelta
 import uuid
 
 
-def seed_if_empty():
-    if User.query.first():
+def _seed_calls(admin_id, coordinator_id):
+    if CallForSubmission.query.first():
         return
+    db.session.add_all([
+        CallForSubmission(
+            title='JAR', full_name='Journal for Artistic Research',
+            venue_type='journal', deadline_status='fixed',
+            area='artistic research, practice-based research, exposition-based publication',
+            known_deadline=date(2026, 5, 31),
+            source_url='https://www.jar-online.net/en/calls',
+            description='Three annual submission deadlines (May 31, Sep 30, Jan 31). Extremely high relevance for artistic research outputs and exposition-format work.',
+            guidelines='Expositions submitted via the Research Catalogue platform. No word limit but scope is evaluated. Peer-reviewed.',
+            recurrence='annual',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='NIME 2026', full_name='International Conference on New Interfaces for Musical Expression',
+            venue_type='conference', deadline_status='fixed',
+            area='musical interfaces, experimental instruments, embodied interaction, performance, installations',
+            known_deadline=date(2026, 6, 23),
+            source_url='https://nime2026.org/',
+            description='NIME is the premier conference on new musical interfaces. Workshops due 2026-03-05; conference 2026-06-23 to 06-26.',
+            guidelines='Paper, music, and installation submissions via EasyChair. Camera-ready due 2026-04-30. Check call pages for format requirements.',
+            recurrence='annual',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='DAFx26', full_name='International Conference on Digital Audio Effects',
+            venue_type='conference', deadline_status='fixed',
+            area='audio effects, signal processing, MIR-adjacent audio research',
+            known_deadline=date(2026, 9, 1),
+            source_url='https://dafx26.mit.edu/',
+            description='Conference runs 2026-09-01 to 09-04. Paper submissions closed 2026-03-30; demo submissions due 2026-05-18.',
+            guidelines='Full paper or demo paper. LaTeX template required. Max 8 pages for papers. Demo submissions accepted until 2026-05-22.',
+            recurrence='annual',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='ISMIR 2026', full_name='International Society for Music Information Retrieval Conference',
+            venue_type='conference', deadline_status='fixed',
+            area='MIR, computational music analysis, generation, algorithms',
+            known_deadline=date(2026, 4, 27),
+            source_url='https://ismir2026.ismir.net/',
+            description='The main MIR conference. Paper submission deadline 2026-04-27. Early-bird registration 2026-07-10.',
+            guidelines='6-page paper + references. Double-blind review. Reproducibility encouraged. Submission via CMT.',
+            recurrence='annual',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='ICMC 2026', full_name='International Computer Music Conference',
+            venue_type='conference', deadline_status='fixed',
+            area='computer music, algorithmic composition, electronic music, music tech',
+            known_deadline=date(2026, 4, 1),
+            source_url='https://www.icmc2026.com/',
+            description='Abstracts were due 2026-02-15; camera-ready due 2026-04-01. Core venue for computer music research and practice.',
+            guidelines='Submit via EasyChair. Paper and music / installation calls. Check site for exact format.',
+            recurrence='annual',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='SMC 2026', full_name='Sound and Music Computing Conference',
+            venue_type='conference', deadline_status='fixed',
+            area='sound and music computing, AI + music, sonic creativity, performances and installations',
+            known_deadline=date(2026, 3, 13),
+            source_url='https://smc26.mbz.hr/',
+            description='Paper and music submission deadline 2026-03-13. Strong venue for sound/music computing intersecting artistic practice.',
+            guidelines='Full papers and extended abstracts accepted. Music/installation call open separately. LaTeX or Word template.',
+            recurrence='annual',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='I3DA 2026', full_name='International Conference on Immersive and 3D Audio',
+            venue_type='conference', deadline_status='fixed',
+            area='immersive audio, spatial audio, VR/AR audio, 3D sound',
+            known_deadline=date(2026, 5, 18),
+            source_url='https://www.i3da2026.org/cfp.html',
+            description='Abstract due 2026-04-03; full paper due 2026-05-18. Core venue for spatial and immersive audio research.',
+            guidelines='4–6 page papers, IEEE format. Abstract submission required before full paper.',
+            recurrence='biennial',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='Organised Sound',
+            venue_type='journal', deadline_status='special-issue-based',
+            area='electroacoustic music, sonic arts, sound art, music technology',
+            source_url='https://www.cambridge.org/core/journals/organised-sound',
+            description='Cambridge journal for electroacoustic and sonic arts. Themed issues vary; current special issue on "Electroacoustic Audiovisual Composition and Intermediality" (deadline 2026-01-15 has passed).',
+            guidelines='Check current call on Cambridge Core. Standard academic paper format, 6000–8000 words typical.',
+            recurrence='none',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='Leonardo', full_name='Leonardo / MIT Press',
+            venue_type='journal', deadline_status='rolling',
+            area='art-science-technology, experimental media, hybrid theory/practice',
+            source_url='https://leonardo.info/faqs',
+            description='Rolling submissions; no fixed deadline. Extremely high relevance for art-science-technology intersections.',
+            guidelines='Unsolicited submissions accepted. 2000–6000 words. Check submission guidelines on Leonardo website.',
+            recurrence='none',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='TISMIR', full_name='Transactions of the International Society for Music Information Retrieval',
+            venue_type='journal', deadline_status='rolling',
+            area='music information retrieval, computational music analysis, music AI',
+            source_url='https://transactions.ismir.net/',
+            description='Open-access MIR journal with rolling submissions. Complements ISMIR conference.',
+            guidelines='Full research papers. LaTeX template. Single-blind or double-blind depending on submission type.',
+            recurrence='none',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='Prix Ars Electronica 2027', full_name='Prix Ars Electronica — Digital Musics & Sound Art / AI & Intelligence',
+            venue_type='prize', deadline_status='seasonal-check',
+            area='media art, digital music and sound art, AI art, interactive art',
+            known_deadline=date(2027, 3, 1),
+            source_url='https://ars.electronica.art/prix/en/',
+            description='Annual prize. 2026 extended deadline was 2026-03-09. Next open call expected January 2027. Relevant categories: Digital Musics & Sound Art, Artificial Life & Intelligence, Interactive Art+.',
+            guidelines='Online submission platform. Projects, artworks, and research outputs eligible. Check category-specific guidelines each year.',
+            recurrence='annual',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='ZKM Open Calls', full_name='ZKM | Zentrum für Kunst und Medien — Open Calls',
+            venue_type='residency', deadline_status='seasonal-check',
+            area='media art, sound research, installations, theory and practice',
+            source_url='https://zkm.de/en/open-calls',
+            description='ZKM regularly posts residency and research calls. Recent: Exoplanetary Voices (2026-03-20), Rauschenberg Residencies (2026-04-12), Summer School TIME³ (2026-05-06).',
+            guidelines='Varies per call. Check zkm.de/en/open-calls for current opportunities.',
+            recurrence='none',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='EMAP Residencies', full_name='European Media Art Platform — Artist Residencies',
+            venue_type='residency', deadline_status='seasonal-check',
+            area='media art residencies, collaborative production, experimental technology art',
+            source_url='https://call.emare.eu/',
+            description='Important European residency platform. PhD candidates explicitly eligible. 2027 residencies open call expected autumn 2026.',
+            guidelines='Online application via emare.eu. Project proposal + portfolio. International collaborations encouraged.',
+            recurrence='annual',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='CMMAS / Visiones Sonoras', full_name='Centro Mexicano para la Música y las Artes Sonoras',
+            venue_type='festival', deadline_status='seasonal-check',
+            area='electroacoustic music, sound art, residencies, festivals, workshops',
+            source_url='https://www.cmmas.org/convocatorias',
+            description='Major Ibero-American node for sound art and contemporary music. Regular calls for Visiones Sonoras festival, residencies, and composition programs. Check convocatorias page each spring.',
+            guidelines='Varies per call. Spanish and English accepted. Check cmmas.org/convocatorias for current opportunities.',
+            recurrence='annual',
+            created_by_id=coordinator_id),
+        CallForSubmission(
+            title='ISEA', full_name='International Symposium on Electronic / Emerging Art',
+            venue_type='conference', deadline_status='seasonal-check',
+            area='electronic art, media art, sound art, hybrid practices',
+            source_url='https://isea-archives.org/',
+            description='Essential umbrella event for media art, sound, and hybrid art research ecosystems. Annual; call timing varies by host city.',
+            guidelines='Paper and artwork/installation submissions. Check current ISEA host website for year-specific guidelines.',
+            recurrence='annual',
+            created_by_id=coordinator_id),
+    ])
+    db.session.commit()
 
+
+def seed_if_empty():
+    first_user = User.query.first()
+    if not first_user:
+        _seed_full()
+        return
+    # Seed calls independently even if users already exist
+    admin = User.query.filter_by(role='admin').first() or first_user
+    coordinator = User.query.filter(User.role.in_(['coordinator', 'admin'])).first() or first_user
+    _seed_calls(admin.id, coordinator.id)
+
+
+def _seed_full():
     users = [
         ('Admin User', 'admin@example.com', 'admin', 'admin123'),
         ('MC Director', 'director@example.com', 'director', 'director123'),
@@ -266,3 +425,7 @@ def seed_if_empty():
     ])
 
     db.session.commit()
+    # Seed calls as separate step (also runs for existing DBs)
+    _seed_calls(admin_id, coordinator_id)
+
+

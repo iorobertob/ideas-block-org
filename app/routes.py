@@ -1,8 +1,13 @@
-from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory, jsonify
-from datetime import datetime, date
+from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory, jsonify, current_app
+from datetime import datetime, date, timedelta
 import calendar as cal_module
 import os
 import uuid
+import smtplib
+import urllib.request
+import urllib.error
+import re as _re
+from email.mime.text import MIMEText
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 from .models import (
@@ -13,7 +18,7 @@ from .models import (
     WorkingGroup, WorkingGroupMembership, ProjectMembership,
     Milestone, Task, Facility, ConstitutionDocument,
     Poll, PollOption, PollVote, PollToken,
-    LegacyTask
+    LegacyTask, CallForSubmission, CallSubscription
 )
 
 
@@ -145,6 +150,32 @@ def _log_field_changes(entity_type, entity_id, old_vals, new_vals):
                 user_id=uid, action='update',
                 field_changed=fname, old_value=old_v, new_value=new_v
             ))
+
+
+def _send_email(to, subject, body):
+    server = current_app.config.get('MAIL_SERVER', '')
+    if not server:
+        print(f"[EMAIL] (no MAIL_SERVER configured) Would send to {to}: {subject}")
+        return True
+    try:
+        msg = MIMEText(body, 'plain', 'utf-8')
+        msg['Subject'] = subject
+        msg['From'] = current_app.config.get('MAIL_FROM', 'noreply@kompresorine.local')
+        msg['To'] = to
+        port = current_app.config.get('MAIL_PORT', 587)
+        use_tls = current_app.config.get('MAIL_USE_TLS', True)
+        username = current_app.config.get('MAIL_USERNAME', '')
+        password = current_app.config.get('MAIL_PASSWORD', '')
+        with smtplib.SMTP(server, port, timeout=10) as smtp:
+            if use_tls:
+                smtp.starttls()
+            if username:
+                smtp.login(username, password)
+            smtp.sendmail(msg['From'], [to], msg.as_string())
+        return True
+    except Exception as e:
+        print(f"[EMAIL ERROR] Failed to send to {to}: {e}")
+        return False
 
 
 # ─────────────────────────────────────────────
@@ -1930,6 +1961,266 @@ def register_routes(app):
 
         total = sum(len(v) for v in results.values())
         return render_template('search.html', q=q, results=results, total=total)
+
+    # ── Calls for Submission ──
+
+    @app.route('/calls', methods=['GET', 'POST'])
+    def calls():
+        if not login_required():
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            if not is_manager():
+                abort(403)
+            c = CallForSubmission(
+                title=request.form.get('title', '').strip(),
+                full_name=request.form.get('full_name', '').strip(),
+                venue_type=request.form.get('venue_type', 'conference'),
+                area=request.form.get('area', '').strip(),
+                description=request.form.get('description', '').strip(),
+                deadline_status=request.form.get('deadline_status', 'unknown-current'),
+                known_deadline=parse_date(request.form.get('known_deadline')),
+                source_url=request.form.get('source_url', '').strip(),
+                guidelines=request.form.get('guidelines', '').strip(),
+                recurrence=request.form.get('recurrence', 'none'),
+                created_by_id=current_user().id,
+            )
+            db.session.add(c)
+            db.session.commit()
+            flash('Call added.', 'success')
+            return redirect(url_for('calls'))
+
+        venue_type_f = request.args.get('venue_type', '')
+        status_f = request.args.get('deadline_status', '')
+        q = request.args.get('q', '').strip()
+        query = CallForSubmission.query
+        if venue_type_f:
+            query = query.filter_by(venue_type=venue_type_f)
+        if status_f:
+            query = query.filter_by(deadline_status=status_f)
+        if q:
+            query = query.filter(
+                CallForSubmission.title.ilike(f'%{q}%') |
+                CallForSubmission.area.ilike(f'%{q}%') |
+                CallForSubmission.description.ilike(f'%{q}%')
+            )
+        today = date.today()
+        needs_bump_f = request.args.get('needs_bump', '')
+        all_calls = query.order_by(
+            CallForSubmission.known_deadline.asc().nullslast(),
+            CallForSubmission.title.asc()
+        ).all()
+        if needs_bump_f:
+            all_calls = [c for c in all_calls
+                         if c.known_deadline and c.known_deadline < today and c.recurrence != 'none']
+        user = current_user()
+        subscribed_ids = {s.call_id for s in CallSubscription.query.filter_by(user_id=user.id).all()} if user else set()
+        staleness_threshold = today - timedelta(days=90)
+        return render_template('calls.html', calls=all_calls, today=today,
+                               subscribed_ids=subscribed_ids,
+                               venue_type_f=venue_type_f, status_f=status_f, q=q,
+                               needs_bump_f=needs_bump_f,
+                               staleness_threshold=staleness_threshold,
+                               is_manager=is_manager())
+
+    @app.route('/calls/<int:call_id>', methods=['GET', 'POST'])
+    def call_detail(call_id):
+        if not login_required():
+            return redirect(url_for('login'))
+        call = db.session.get(CallForSubmission, call_id)
+        if not call:
+            abort(404)
+        if request.method == 'POST':
+            if not is_manager():
+                abort(403)
+            call.title = request.form.get('title', call.title).strip()
+            call.full_name = request.form.get('full_name', call.full_name).strip()
+            call.venue_type = request.form.get('venue_type', call.venue_type)
+            call.area = request.form.get('area', call.area).strip()
+            call.description = request.form.get('description', call.description).strip()
+            call.deadline_status = request.form.get('deadline_status', call.deadline_status)
+            raw_dl = request.form.get('known_deadline', '')
+            new_dl = parse_date(raw_dl) if raw_dl else None
+            if new_dl != call.known_deadline:
+                call.known_deadline = new_dl
+                call.last_verified_at = None
+            call.source_url = request.form.get('source_url', call.source_url).strip()
+            call.guidelines = request.form.get('guidelines', call.guidelines).strip()
+            call.recurrence = request.form.get('recurrence', call.recurrence)
+            db.session.commit()
+            flash('Call updated.', 'success')
+            return redirect(url_for('call_detail', call_id=call_id))
+        user = current_user()
+        is_subscribed = bool(user and CallSubscription.query.filter_by(call_id=call_id, user_id=user.id).first())
+        subscribers = CallSubscription.query.filter_by(call_id=call_id).all()
+        today = date.today()
+        staleness_threshold = today - timedelta(days=90)
+        return render_template('call_detail.html', call=call, is_subscribed=is_subscribed,
+                               subscribers=subscribers, today=today, is_manager=is_manager(),
+                               staleness_threshold=staleness_threshold)
+
+    @app.route('/calls/<int:call_id>/subscribe', methods=['POST'])
+    def call_subscribe(call_id):
+        if not login_required():
+            return redirect(url_for('login'))
+        call = db.session.get(CallForSubmission, call_id)
+        if not call:
+            abort(404)
+        user = current_user()
+        action = request.form.get('action', 'subscribe')
+        existing = CallSubscription.query.filter_by(call_id=call_id, user_id=user.id).first()
+        if action == 'unsubscribe' and existing:
+            db.session.delete(existing)
+            db.session.commit()
+            flash(f'Unsubscribed from "{call.title}".', 'info')
+        elif action == 'subscribe' and not existing:
+            db.session.add(CallSubscription(call_id=call_id, user_id=user.id))
+            db.session.commit()
+            flash(f'Subscribed to "{call.title}". You will receive deadline reminders by email.', 'success')
+        return redirect(request.referrer or url_for('call_detail', call_id=call_id))
+
+    @app.route('/calls/<int:call_id>/notify', methods=['POST'])
+    def call_notify(call_id):
+        if not login_required() or not is_manager():
+            abort(403)
+        call = db.session.get(CallForSubmission, call_id)
+        if not call:
+            abort(404)
+        subscribers = CallSubscription.query.filter_by(call_id=call_id).all()
+        if not subscribers:
+            flash('No subscribers for this call.', 'warning')
+            return redirect(url_for('call_detail', call_id=call_id))
+        message = request.form.get('message', '').strip()
+        deadline_str = call.known_deadline.strftime('%Y-%m-%d') if call.known_deadline else 'see call details'
+        sent = failed = 0
+        for sub in subscribers:
+            if not (sub.user and sub.user.email):
+                continue
+            subject = f'[Kompresorinė] Reminder: {call.title}'
+            body_parts = [
+                f'Hi {sub.user.name},',
+                '',
+                'This is a reminder about a submission call you are subscribed to:',
+                '',
+                call.title,
+            ]
+            if call.full_name:
+                body_parts.append(f'({call.full_name})')
+            body_parts += [
+                '',
+                f'Deadline: {deadline_str}',
+                f'Status: {call.deadline_status}',
+                f'Source: {call.source_url or "—"}',
+            ]
+            if call.area:
+                body_parts += ['', f'Area: {call.area}']
+            if call.guidelines:
+                body_parts += ['', 'Guidelines:', call.guidelines]
+            if message:
+                body_parts += ['', '—', message]
+            body_parts += ['', '— Kompresorinė Platform']
+            ok = _send_email(sub.user.email, subject, '\n'.join(body_parts))
+            if ok:
+                sent += 1
+            else:
+                failed += 1
+        if sent:
+            flash(f'Notification sent to {sent} subscriber(s).', 'success')
+        if failed:
+            flash(f'{failed} email(s) could not be sent. Check MAIL_SERVER configuration.', 'warning')
+        return redirect(url_for('call_detail', call_id=call_id))
+
+    @app.route('/calls/<int:call_id>/delete', methods=['POST'])
+    def call_delete(call_id):
+        if not login_required() or not is_manager():
+            abort(403)
+        call = db.session.get(CallForSubmission, call_id)
+        if not call:
+            abort(404)
+        db.session.delete(call)
+        db.session.commit()
+        flash('Call deleted.', 'info')
+        return redirect(url_for('calls'))
+
+    @app.route('/calls/fetch-url')
+    def calls_fetch_url():
+        if not login_required() or not is_manager():
+            return jsonify({'error': 'unauthorized'}), 401
+        url = request.args.get('url', '').strip()
+        if not url:
+            return jsonify({'error': 'No URL provided'}), 400
+        headers = {'User-Agent': 'Mozilla/5.0 (compatible; KompresorinePlatform/1.0)'}
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                raw = resp.read(500_000)
+            charset = resp.headers.get_content_charset() or 'utf-8'
+            html = raw.decode(charset, errors='replace')
+        except Exception as e:
+            return jsonify({'error': f'Could not fetch page: {e}'}), 200
+        text = _re.sub(r'<[^>]+>', ' ', html)
+        text = _re.sub(r'&[a-z]+;', ' ', text)
+        text = _re.sub(r'\s+', ' ', text)
+        DATE_PAT = _re.compile(
+            r'(?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2}'
+            r'|\d{1,2}[-/.]\d{1,2}[-/.]\d{4}'
+            r'|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}'
+            r'|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4})',
+            _re.IGNORECASE)
+        KEYWORD_PAT = _re.compile(
+            r'deadline|submission|submit|due\s+date|due\s+by|closes?|apply\s+by', _re.IGNORECASE)
+        candidates, seen = [], set()
+        for m in DATE_PAT.finditer(text):
+            ds = m.group(0).strip()
+            if ds in seen:
+                continue
+            start, end = max(0, m.start() - 120), min(len(text), m.end() + 120)
+            ctx = text[start:end].strip()
+            if KEYWORD_PAT.search(ctx):
+                seen.add(ds)
+                candidates.append({'date': ds, 'context': ctx})
+            if len(candidates) >= 5:
+                break
+        if not candidates:
+            return jsonify({'error': 'No deadline-related dates found on page. Check the source URL manually.'}), 200
+        return jsonify({'candidates': candidates})
+
+    @app.route('/calls/<int:call_id>/bump', methods=['POST'])
+    def call_bump(call_id):
+        if not login_required() or not is_manager():
+            abort(403)
+        call = db.session.get(CallForSubmission, call_id)
+        if not call:
+            abort(404)
+        if call.recurrence == 'none' or not call.known_deadline:
+            flash('This call is not configured for bumping.', 'warning')
+            return redirect(url_for('call_detail', call_id=call_id))
+        years = 2 if call.recurrence == 'biennial' else 1
+        old_dl = call.known_deadline
+        try:
+            new_dl = old_dl.replace(year=old_dl.year + years)
+        except ValueError:
+            new_dl = old_dl.replace(year=old_dl.year + years, day=28)
+        call.known_deadline = new_dl
+        call.last_verified_at = None
+        db.session.commit()
+        flash(
+            f'Deadline bumped from {old_dl} to {new_dl} (estimated). '
+            'Verify against source before notifying subscribers.',
+            'warning'
+        )
+        return redirect(url_for('call_detail', call_id=call_id))
+
+    @app.route('/calls/<int:call_id>/verify', methods=['POST'])
+    def call_verify(call_id):
+        if not login_required() or not is_manager():
+            abort(403)
+        call = db.session.get(CallForSubmission, call_id)
+        if not call:
+            abort(404)
+        call.last_verified_at = date.today()
+        db.session.commit()
+        flash(f'Marked as verified on {call.last_verified_at}.', 'success')
+        return redirect(url_for('call_detail', call_id=call_id))
 
     # ── About ──
 

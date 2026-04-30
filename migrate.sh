@@ -620,6 +620,38 @@ add_column "attachment" "original_name"   "VARCHAR(255) NOT NULL DEFAULT ''"
 add_column "attachment" "uploaded_by_id"  "INTEGER REFERENCES user(id)"
 add_column "attachment" "uploaded_at"     "DATETIME DEFAULT CURRENT_TIMESTAMP"
 
+echo ""
+echo "── Calls & Deadlines ────────────────────────────────────"
+
+create_table "call_for_submission" "
+CREATE TABLE IF NOT EXISTS call_for_submission (
+    id INTEGER PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    full_name VARCHAR(300) DEFAULT '',
+    venue_type VARCHAR(50) NOT NULL DEFAULT 'conference',
+    area TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    deadline_status VARCHAR(30) DEFAULT 'unknown-current',
+    known_deadline DATE,
+    source_url VARCHAR(500) DEFAULT '',
+    guidelines TEXT DEFAULT '',
+    recurrence VARCHAR(20) NOT NULL DEFAULT 'none',
+    last_verified_at DATE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_by_id INTEGER REFERENCES user(id)
+);"
+add_column "call_for_submission" "recurrence"       "VARCHAR(20) NOT NULL DEFAULT 'none'"
+add_column "call_for_submission" "last_verified_at" "DATE"
+
+create_table "call_subscription" "
+CREATE TABLE IF NOT EXISTS call_subscription (
+    id INTEGER PRIMARY KEY,
+    call_id INTEGER NOT NULL REFERENCES call_for_submission(id),
+    user_id INTEGER NOT NULL REFERENCES user(id),
+    subscribed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(call_id, user_id)
+);"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # VERIFY
 # ─────────────────────────────────────────────────────────────────────────────
@@ -637,6 +669,7 @@ EXPECTED_TABLES=(
     poll poll_option poll_vote poll_token
     task legacy_task milestone
     audit_log attachment
+    call_for_submission call_subscription
 )
 
 ALL_OK=true

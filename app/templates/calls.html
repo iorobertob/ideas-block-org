@@ -1,0 +1,187 @@
+{% extends 'base.html' %}{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div>
+    <h1>Calls &amp; Deadlines</h1>
+    <div class="small-muted">Conferences, journals, festivals, residencies and open calls — subscribe to get email reminders</div>
+  </div>
+  {% if is_manager %}
+  <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newCallForm">+ Add call</button>
+  {% endif %}
+</div>
+
+{% if is_manager %}
+<div class="collapse mb-3" id="newCallForm">
+<div class="card"><div class="card-body">
+<h5 class="mb-3">New call for submission</h5>
+<form method="post" class="row g-2">
+  <div class="col-md-5"><input class="form-control form-control-sm" name="title" placeholder="Short title / acronym (e.g. NIME 2026)" required></div>
+  <div class="col-md-4"><input class="form-control form-control-sm" name="full_name" placeholder="Full name (optional)"></div>
+  <div class="col-md-3">
+    <select class="form-select form-select-sm" name="venue_type">
+      <option value="conference">Conference</option>
+      <option value="journal">Journal</option>
+      <option value="festival">Festival</option>
+      <option value="residency">Residency</option>
+      <option value="prize">Prize</option>
+      <option value="workshop">Workshop</option>
+      <option value="other">Other</option>
+    </select>
+  </div>
+  <div class="col-md-6"><input class="form-control form-control-sm" name="area" placeholder="Area / topics (e.g. sound art, computer music, MIR)"></div>
+  <div class="col-md-3">
+    <select class="form-select form-select-sm" name="deadline_status">
+      <option value="fixed">Fixed deadline</option>
+      <option value="rolling">Rolling</option>
+      <option value="seasonal-check">Seasonal / recurring</option>
+      <option value="special-issue-based">Special issue based</option>
+      <option value="unknown-current">Unknown / verify</option>
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select class="form-select form-select-sm" name="recurrence">
+      <option value="none">No recurrence</option>
+      <option value="annual">Annual</option>
+      <option value="biennial">Biennial</option>
+    </select>
+  </div>
+  <div class="col-md-3"><input type="date" class="form-control form-control-sm" name="known_deadline" placeholder="Deadline"></div>
+  <div class="col-md-9"><input class="form-control form-control-sm" type="url" name="source_url" placeholder="Source URL (https://…)"></div>
+  <div class="col-12"><textarea class="form-control form-control-sm" name="description" placeholder="Short description" style="min-height:60px"></textarea></div>
+  <div class="col-12"><textarea class="form-control form-control-sm" name="guidelines" placeholder="Application guidelines (optional — formats, word limits, submission process…)" style="min-height:60px"></textarea></div>
+  <div class="col-12 d-flex justify-content-end"><button class="btn btn-sm btn-dark">Add call</button></div>
+</form>
+</div></div>
+</div>
+{% endif %}
+
+<!-- Filters -->
+<form method="get" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+  <input class="form-control form-control-sm" style="max-width:200px" name="q" value="{{ q }}" placeholder="Search…">
+  <select class="form-select form-select-sm" style="max-width:150px" name="venue_type">
+    <option value="">All types</option>
+    {% for vt in [('conference','Conference'),('journal','Journal'),('festival','Festival'),('residency','Residency'),('prize','Prize'),('workshop','Workshop'),('other','Other')] %}
+    <option value="{{ vt[0] }}" {% if venue_type_f==vt[0] %}selected{% endif %}>{{ vt[1] }}</option>
+    {% endfor %}
+  </select>
+  <select class="form-select form-select-sm" style="max-width:180px" name="deadline_status">
+    <option value="">All statuses</option>
+    <option value="fixed" {% if status_f=='fixed' %}selected{% endif %}>Fixed deadline</option>
+    <option value="rolling" {% if status_f=='rolling' %}selected{% endif %}>Rolling</option>
+    <option value="seasonal-check" {% if status_f=='seasonal-check' %}selected{% endif %}>Seasonal</option>
+    <option value="special-issue-based" {% if status_f=='special-issue-based' %}selected{% endif %}>Special issue</option>
+    <option value="unknown-current" {% if status_f=='unknown-current' %}selected{% endif %}>Unknown</option>
+  </select>
+  <div class="form-check form-check-inline ms-1" style="font-size:0.83rem">
+    <input class="form-check-input" type="checkbox" name="needs_bump" value="1"
+           id="fNeedsBump" {% if needs_bump_f %}checked{% endif %}>
+    <label class="form-check-label" for="fNeedsBump">Needs bump</label>
+  </div>
+  <button class="btn btn-sm btn-outline-secondary">Filter</button>
+  {% if q or venue_type_f or status_f or needs_bump_f %}
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('calls') }}">Clear</a>
+  {% endif %}
+</form>
+
+{% set ds_colors = {
+  'fixed': 'background:#d4edda;color:#155724',
+  'rolling': 'background:#cce5ff;color:#004085',
+  'seasonal-check': 'background:#fff3cd;color:#856404',
+  'special-issue-based': 'background:#e2d9f3;color:#432874',
+  'unknown-current': 'background:#e2e3e5;color:#383d41'
+} %}
+{% set vt_colors = {
+  'conference': 'background:#e8f0e8;color:#3a5c3a',
+  'journal': 'background:#e8eaf6;color:#3949ab',
+  'festival': 'background:#fce4d6;color:#8b2500',
+  'residency': 'background:#fff3e0;color:#bf6f00',
+  'prize': 'background:#fce8d8;color:#7a3c00',
+  'workshop': 'background:#e0f7fa;color:#006064',
+  'other': 'background:#f5f5f5;color:#555'
+} %}
+
+<div class="card">
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-sm mb-0 table-hover linked-row">
+  <thead><tr>
+    <th>Call</th>
+    <th class="hide-mobile">Type</th>
+    <th class="hide-mobile">Area</th>
+    <th>Deadline</th>
+    <th>Status</th>
+    <th>Sub.</th>
+    <th></th>
+  </tr></thead>
+  <tbody>
+  {% for c in calls %}
+  {% set overdue = c.known_deadline and c.known_deadline < today and c.deadline_status == 'fixed' %}
+  {% set days_left = (c.known_deadline - today).days if c.known_deadline else None %}
+  {% set soon = days_left is not none and days_left >= 0 and days_left <= 30 %}
+  {% set needs_bump = c.known_deadline and c.known_deadline < today and c.recurrence != 'none' %}
+  {% set unverified = c.deadline_status == 'fixed' and (c.last_verified_at is none or c.last_verified_at < staleness_threshold) %}
+  <tr {% if needs_bump %}class="table-warning"{% elif overdue %}class="table-danger" style="opacity:0.6"{% elif soon %}class="table-warning"{% endif %}>
+    <td>
+      <a href="{{ url_for('call_detail', call_id=c.id) }}" class="primary-link">{{ c.title }}</a>
+      {% if c.full_name %}<div class="small-muted" style="font-size:0.77rem">{{ c.full_name }}</div>{% endif %}
+      {% if c.description %}<div class="small-muted" style="font-size:0.77rem">{{ c.description[:100] }}{% if c.description|length > 100 %}…{% endif %}</div>{% endif %}
+    </td>
+    <td class="hide-mobile">
+      <span class="agenda-pill" style="{{ vt_colors.get(c.venue_type,'') }}">{{ c.venue_type }}</span>
+      {% if c.recurrence != 'none' %}<span class="small-muted" style="font-size:0.7rem;display:block">⟳ {{ c.recurrence }}</span>{% endif %}
+    </td>
+    <td class="hide-mobile small-muted" style="max-width:200px;font-size:0.77rem">{{ c.area[:80] }}{% if c.area|length > 80 %}…{% endif %}</td>
+    <td class="text-nowrap small-muted">
+      {% if c.known_deadline %}
+        <span class="{% if needs_bump %}text-warning fw-semibold{% elif overdue %}text-danger fw-semibold{% elif soon %}text-warning fw-semibold{% endif %}">
+          {{ c.known_deadline }}
+        </span>
+        {% if needs_bump %}
+          <div style="font-size:0.72rem" class="text-warning">⟳ recurring — bump?</div>
+        {% elif not overdue and days_left is not none and days_left >= 0 %}
+          <div style="font-size:0.72rem;color:var(--k-muted)">{{ days_left }}d left</div>
+        {% elif overdue %}
+          <div style="font-size:0.72rem" class="text-danger">passed</div>
+        {% endif %}
+        {% if unverified and not needs_bump %}
+          <div style="font-size:0.72rem;color:var(--k-muted)">⚠ unverified</div>
+        {% endif %}
+      {% else %}—{% endif %}
+    </td>
+    <td><span class="status-badge" style="{{ ds_colors.get(c.deadline_status,'') }}">{{ c.deadline_status.replace('-',' ') }}</span></td>
+    <td>
+      {% set sub_count = c.subscriptions.count() %}
+      {% if sub_count > 0 %}<span class="small-muted">{{ sub_count }}</span>{% else %}—{% endif %}
+    </td>
+    <td>
+      <form method="post" action="{{ url_for('call_subscribe', call_id=c.id) }}" class="d-inline">
+        {% if c.id in subscribed_ids %}
+          <input type="hidden" name="action" value="unsubscribe">
+          <button class="btn btn-sm btn-link p-0 text-success" title="Subscribed — click to unsubscribe">★</button>
+        {% else %}
+          <input type="hidden" name="action" value="subscribe">
+          <button class="btn btn-sm btn-link p-0 text-muted" title="Subscribe for email reminders">☆</button>
+        {% endif %}
+      </form>
+      {% if is_manager and needs_bump %}
+      <form method="post" action="{{ url_for('call_bump', call_id=c.id) }}" class="d-inline ms-1">
+        <button class="btn btn-sm btn-link p-0 text-warning" title="Bump {{ c.recurrence }} deadline by {{ '2 years' if c.recurrence == 'biennial' else '1 year' }}">⟳</button>
+      </form>
+      {% endif %}
+      {% if c.source_url %}
+      <a href="{{ c.source_url }}" target="_blank" rel="noopener" class="ms-1 small-muted" style="font-size:0.78rem" title="Source">↗</a>
+      {% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7" class="text-center small-muted py-3">No calls found. {% if is_manager %}Add one above.{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+
+<div class="mt-3 small-muted" style="font-size:0.78rem">
+  ★ = subscribed · ☆ = subscribe · ⟳ = bump recurring deadline · ↗ = source link · Yellow = within 30 days or needs bump · ⚠ = not verified in 90+ days
+</div>
+{% endblock %}

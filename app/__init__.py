@@ -10,6 +10,12 @@ def create_app():
     app.config['SECRET_KEY'] = 'dev-secret-key-change-me'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'kompresorine.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', '')
+    app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+    app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', '1') == '1'
+    app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
+    app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
+    app.config['MAIL_FROM'] = os.environ.get('MAIL_FROM', 'noreply@kompresorine.local')
     db.init_app(app)
     register_routes(app)
     with app.app_context():

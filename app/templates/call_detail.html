@@ -1,0 +1,336 @@
+{% extends 'base.html' %}{% block content %}
+{% set ds_colors = {
+  'fixed': 'background:#d4edda;color:#155724',
+  'rolling': 'background:#cce5ff;color:#004085',
+  'seasonal-check': 'background:#fff3cd;color:#856404',
+  'special-issue-based': 'background:#e2d9f3;color:#432874',
+  'unknown-current': 'background:#e2e3e5;color:#383d41'
+} %}
+{% set vt_colors = {
+  'conference': 'background:#e8f0e8;color:#3a5c3a',
+  'journal': 'background:#e8eaf6;color:#3949ab',
+  'festival': 'background:#fce4d6;color:#8b2500',
+  'residency': 'background:#fff3e0;color:#bf6f00',
+  'prize': 'background:#fce8d8;color:#7a3c00',
+  'workshop': 'background:#e0f7fa;color:#006064',
+  'other': 'background:#f5f5f5;color:#555'
+} %}
+{% set overdue = call.known_deadline and call.known_deadline < today and call.deadline_status == 'fixed' %}
+{% set days_left = (call.known_deadline - today).days if call.known_deadline else None %}
+{% set needs_bump = call.known_deadline and call.known_deadline < today and call.recurrence != 'none' %}
+{% set unverified = call.deadline_status == 'fixed' and (call.last_verified_at is none or call.last_verified_at < staleness_threshold) %}
+
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <div class="small-muted mb-1"><a href="{{ url_for('calls') }}">← Calls &amp; Deadlines</a></div>
+    <h1>{{ call.title }}</h1>
+    {% if call.full_name %}<div class="small-muted">{{ call.full_name }}</div>{% endif %}
+    <div class="mt-1">
+      <span class="agenda-pill" style="{{ vt_colors.get(call.venue_type,'') }}">{{ call.venue_type }}</span>
+      {% if call.recurrence != 'none' %}<span class="agenda-pill ms-1" style="background:#f0f0f0;color:#555">⟳ {{ call.recurrence }}</span>{% endif %}
+      <span class="status-badge ms-1" style="{{ ds_colors.get(call.deadline_status,'') }}">{{ call.deadline_status.replace('-', ' ') }}</span>
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if call.source_url %}
+    <a href="{{ call.source_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">Source ↗</a>
+    {% endif %}
+    <form method="post" action="{{ url_for('call_subscribe', call_id=call.id) }}" class="d-inline">
+      {% if is_subscribed %}
+        <input type="hidden" name="action" value="unsubscribe">
+        <button class="btn btn-sm btn-success">★ Subscribed</button>
+      {% else %}
+        <input type="hidden" name="action" value="subscribe">
+        <button class="btn btn-sm btn-outline-secondary">☆ Subscribe</button>
+      {% endif %}
+    </form>
+    {% if is_manager %}
+    {% if not needs_bump %}
+    <form method="post" action="{{ url_for('call_verify', call_id=call.id) }}" class="d-inline">
+      <button class="btn btn-sm btn-outline-secondary" title="Mark deadline as verified against source today">✓ Verified</button>
+    </form>
+    {% endif %}
+    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#editForm">Edit</button>
+    <form method="post" action="{{ url_for('call_delete', call_id=call.id) }}" class="d-inline"
+          onsubmit="return confirm('Delete this call and all subscriptions?')">
+      <button class="btn btn-sm btn-outline-danger">Delete</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+
+    <!-- Bump / staleness alerts (managers only) -->
+    {% if is_manager %}
+    {% if needs_bump %}
+    <div class="alert alert-warning py-2 mb-3 d-flex align-items-center gap-3">
+      <div class="flex-grow-1" style="font-size:0.88rem">
+        <strong>Deadline has passed.</strong> This is an {{ call.recurrence }} call.
+        Bump by {{ '2 years' if call.recurrence == 'biennial' else '1 year' }}, then verify the actual date against the source before notifying subscribers.
+      </div>
+      <form method="post" action="{{ url_for('call_bump', call_id=call.id) }}" class="d-inline flex-shrink-0">
+        <button class="btn btn-sm btn-warning">⟳ Bump deadline</button>
+      </form>
+    </div>
+    {% elif unverified %}
+    <div class="alert alert-secondary py-2 mb-3 d-flex align-items-center gap-3" style="font-size:0.88rem">
+      <div class="flex-grow-1">
+        {% if call.last_verified_at %}Deadline last verified {{ call.last_verified_at }} — over 90 days ago.{% else %}Deadline has never been verified via this system.{% endif %}
+        Check the source and confirm it is still accurate.
+      </div>
+      <form method="post" action="{{ url_for('call_verify', call_id=call.id) }}" class="d-inline flex-shrink-0">
+        <button class="btn btn-sm btn-outline-secondary">✓ Mark as verified</button>
+      </form>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- Key info -->
+    <div class="card mb-3">
+      <div class="card-header">Details</div>
+      <div class="card-body">
+        <dl class="kv row mb-0">
+          <dt class="col-sm-3">Deadline</dt>
+          <dd class="col-sm-9">
+            {% if call.known_deadline %}
+              <span class="{% if needs_bump %}text-warning fw-semibold{% elif overdue %}text-danger fw-semibold{% elif days_left is not none and days_left <= 30 %}text-warning fw-semibold{% endif %}">
+                {{ call.known_deadline }}
+              </span>
+              {% if needs_bump %}
+                <span class="small-muted ms-2">({{ call.recurrence }} — estimated after bump)</span>
+              {% elif not overdue and days_left is not none and days_left >= 0 %}
+                <span class="small-muted ms-2">({{ days_left }} days left)</span>
+              {% elif overdue %}
+                <span class="ms-2 text-danger">(deadline passed)</span>
+              {% endif %}
+            {% else %}—{% endif %}
+          </dd>
+
+          <dt class="col-sm-3">Recurrence</dt>
+          <dd class="col-sm-9">{{ call.recurrence if call.recurrence != 'none' else '—' }}</dd>
+
+          <dt class="col-sm-3">Last verified</dt>
+          <dd class="col-sm-9">
+            {% if call.last_verified_at %}
+              {{ call.last_verified_at }}
+              {% if call.last_verified_at < staleness_threshold %}<span class="ms-2 text-warning" style="font-size:0.8rem">⚠ over 90 days ago</span>{% endif %}
+            {% else %}
+              <span class="text-muted" style="font-size:0.85rem">Never verified via this system</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-3">Area</dt>
+          <dd class="col-sm-9">{{ call.area or '—' }}</dd>
+
+          <dt class="col-sm-3">Source</dt>
+          <dd class="col-sm-9">
+            {% if call.source_url %}
+              <a href="{{ call.source_url }}" target="_blank" rel="noopener">{{ call.source_url[:80] }}{% if call.source_url|length > 80 %}…{% endif %}</a>
+            {% else %}—{% endif %}
+          </dd>
+        </dl>
+      </div>
+    </div>
+
+    {% if call.description %}
+    <div class="card mb-3">
+      <div class="card-header">Description</div>
+      <div class="card-body">
+        <div style="white-space:pre-wrap;font-size:0.9rem">{{ call.description }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if call.guidelines %}
+    <div class="card mb-3">
+      <div class="card-header">Guidelines &amp; How to apply</div>
+      <div class="card-body">
+        <div style="white-space:pre-wrap;font-size:0.9rem">{{ call.guidelines }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if not call.description and not call.guidelines %}
+    <div class="card mb-3">
+      <div class="card-body small-muted">No description or guidelines added yet.
+        {% if is_manager %}Use the edit form to add them.{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Edit form (managers) -->
+    {% if is_manager %}
+    <div class="collapse mb-3" id="editForm">
+    <div class="card"><div class="card-header">Edit call</div><div class="card-body">
+    <form method="post" class="row g-2">
+      <div class="col-md-5"><label class="form-label small mb-1">Short title</label>
+        <input class="form-control form-control-sm" name="title" value="{{ call.title }}" required></div>
+      <div class="col-md-4"><label class="form-label small mb-1">Full name</label>
+        <input class="form-control form-control-sm" name="full_name" value="{{ call.full_name }}"></div>
+      <div class="col-md-3"><label class="form-label small mb-1">Type</label>
+        <select class="form-select form-select-sm" name="venue_type">
+          {% for vt in ['conference','journal','festival','residency','prize','workshop','other'] %}
+          <option value="{{ vt }}" {% if call.venue_type==vt %}selected{% endif %}>{{ vt|capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6"><label class="form-label small mb-1">Area / topics</label>
+        <input class="form-control form-control-sm" name="area" value="{{ call.area }}"></div>
+      <div class="col-md-3"><label class="form-label small mb-1">Deadline status</label>
+        <select class="form-select form-select-sm" name="deadline_status">
+          {% for ds in [('fixed','Fixed'),('rolling','Rolling'),('seasonal-check','Seasonal'),('special-issue-based','Special issue'),('unknown-current','Unknown')] %}
+          <option value="{{ ds[0] }}" {% if call.deadline_status==ds[0] %}selected{% endif %}>{{ ds[1] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3"><label class="form-label small mb-1">Recurrence</label>
+        <select class="form-select form-select-sm" name="recurrence">
+          <option value="none" {% if call.recurrence=='none' %}selected{% endif %}>No recurrence</option>
+          <option value="annual" {% if call.recurrence=='annual' %}selected{% endif %}>Annual</option>
+          <option value="biennial" {% if call.recurrence=='biennial' %}selected{% endif %}>Biennial</option>
+        </select>
+      </div>
+      <div class="col-md-3"><label class="form-label small mb-1">Known deadline</label>
+        <input type="date" class="form-control form-control-sm" name="known_deadline"
+               value="{{ call.known_deadline.strftime('%Y-%m-%d') if call.known_deadline else '' }}"></div>
+      <div class="col-12"><label class="form-label small mb-1">Source URL</label>
+        <div class="d-flex gap-2">
+          <input class="form-control form-control-sm" type="url" name="source_url"
+                 id="sourceUrlInput" value="{{ call.source_url }}">
+          <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap"
+                  onclick="fetchDeadlineDates()">Fetch dates ↗</button>
+        </div>
+        <div id="fetchPanel" style="display:none" class="mt-2">
+          <div id="fetchStatus" class="small-muted mb-1" style="font-size:0.82rem"></div>
+          <div id="fetchCandidates"></div>
+        </div>
+      </div>
+      <div class="col-12"><label class="form-label small mb-1">Description</label>
+        <textarea class="form-control form-control-sm" name="description" style="min-height:80px">{{ call.description }}</textarea></div>
+      <div class="col-12"><label class="form-label small mb-1">Guidelines &amp; how to apply</label>
+        <textarea class="form-control form-control-sm" name="guidelines" style="min-height:100px">{{ call.guidelines }}</textarea></div>
+      <div class="col-12 d-flex justify-content-end"><button class="btn btn-sm btn-dark">Save changes</button></div>
+    </form>
+    </div></div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <div class="col-lg-4">
+
+    <!-- Subscription status -->
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Subscribers</span>
+        <span class="small-muted">{{ subscribers|length }}</span>
+      </div>
+      <div class="card-body p-0">
+        {% if subscribers %}
+        <ul class="list-unstyled mb-0">
+          {% for sub in subscribers %}
+          <li class="px-3 py-2 border-bottom" style="font-size:0.87rem">
+            {{ sub.user.name if sub.user else '—' }}
+            <div class="small-muted" style="font-size:0.75rem">{{ sub.user.email if sub.user else '' }}</div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="px-3 py-2 small-muted">No subscribers yet. Subscribe to receive deadline reminders.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Notify subscribers (managers) -->
+    {% if is_manager and subscribers %}
+    <div class="card mb-3">
+      <div class="card-header">Send notification</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('call_notify', call_id=call.id) }}">
+          <div class="mb-2">
+            <textarea class="form-control form-control-sm" name="message" placeholder="Optional extra message to include in the email…" style="min-height:70px"></textarea>
+          </div>
+          <button class="btn btn-sm btn-dark w-100">Send email to {{ subscribers|length }} subscriber(s)</button>
+        </form>
+        <div class="small-muted mt-2" style="font-size:0.75rem">
+          Sends deadline details and guidelines to all subscribers. Configure MAIL_SERVER env var to enable real delivery.
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Meta -->
+    <div class="card mb-3">
+      <div class="card-header">Meta</div>
+      <div class="card-body p-0">
+        <dl class="kv px-3 py-2 mb-0">
+          <dt>Added</dt>
+          <dd>{{ call.created_at.strftime('%Y-%m-%d') if call.created_at else '—' }}</dd>
+          <dt>Venue type</dt>
+          <dd>{{ call.venue_type }}</dd>
+          <dt>Deadline status</dt>
+          <dd>{{ call.deadline_status.replace('-', ' ') }}</dd>
+          <dt>Recurrence</dt>
+          <dd>{{ call.recurrence if call.recurrence != 'none' else '—' }}</dd>
+        </dl>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% if is_manager %}
+<script>
+function fetchDeadlineDates() {
+  var url = document.getElementById('sourceUrlInput').value.trim();
+  if (!url) { alert('Enter a source URL first.'); return; }
+  var panel = document.getElementById('fetchPanel'),
+      status = document.getElementById('fetchStatus'),
+      cands = document.getElementById('fetchCandidates');
+  panel.style.display = 'block';
+  status.textContent = 'Fetching page…';
+  cands.innerHTML = '';
+  fetch('/calls/fetch-url?url=' + encodeURIComponent(url))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) { status.textContent = data.error; return; }
+      status.textContent = 'Found ' + data.candidates.length + ' candidate date(s) near deadline keywords. Click to pre-fill — you must still save.';
+      data.candidates.forEach(function(c) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-outline-secondary me-1 mb-1';
+        btn.textContent = c.date;
+        btn.title = c.context;
+        btn.onclick = function() {
+          var d = parseToIso(c.date);
+          var f = document.querySelector('input[name="known_deadline"]');
+          if (f && d) { f.value = d; }
+          else if (f) { f.value = ''; alert('Could not parse "' + c.date + '" automatically — enter it manually.'); }
+        };
+        cands.appendChild(btn);
+      });
+    })
+    .catch(function() { status.textContent = 'Network error fetching the page. Check server logs.'; });
+}
+function parseToIso(s) {
+  var m;
+  if (m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/))
+    return m[1] + '-' + m[2].padStart(2,'0') + '-' + m[3].padStart(2,'0');
+  if (m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/))
+    return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
+  var mo = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  if (m = s.match(/([A-Za-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})/)) {
+    var n = mo[m[1].toLowerCase().slice(0,3)];
+    if (n) return m[3] + '-' + String(n).padStart(2,'0') + '-' + m[2].padStart(2,'0');
+  }
+  if (m = s.match(/(\d{1,2})\s+([A-Za-z]+)\.?\s+(\d{4})/)) {
+    var n2 = mo[m[2].toLowerCase().slice(0,3)];
+    if (n2) return m[3] + '-' + String(n2).padStart(2,'0') + '-' + m[1].padStart(2,'0');
+  }
+  return null;
+}
+</script>
+{% endif %}
+{% endblock %}

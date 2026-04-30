@@ -352,3 +352,30 @@ class PollToken(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     used_at = db.Column(db.DateTime, nullable=True)
     poll = db.relationship('Poll')
+
+
+class CallForSubmission(OwnershipMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    full_name = db.Column(db.String(300), default='')
+    venue_type = db.Column(db.String(50), nullable=False, default='conference')
+    area = db.Column(db.Text, default='')
+    description = db.Column(db.Text, default='')
+    deadline_status = db.Column(db.String(30), default='unknown-current')
+    known_deadline = db.Column(db.Date, nullable=True)
+    source_url = db.Column(db.String(500), default='')
+    guidelines = db.Column(db.Text, default='')
+    recurrence = db.Column(db.String(20), nullable=False, default='none')
+    last_verified_at = db.Column(db.Date, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    subscriptions = db.relationship('CallSubscription', backref='call', lazy='dynamic',
+                                    cascade='all, delete-orphan')
+
+
+class CallSubscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    call_id = db.Column(db.Integer, db.ForeignKey('call_for_submission.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    subscribed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship('User')
+    __table_args__ = (db.UniqueConstraint('call_id', 'user_id', name='uq_call_subscription'),)
