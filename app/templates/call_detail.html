@@ -35,6 +35,9 @@
     {% if call.source_url %}
     <a href="{{ call.source_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">Source ↗</a>
     {% endif %}
+    {% if call.known_deadline %}
+    <a href="{{ url_for('call_ical', call_id=call.id) }}" class="btn btn-sm btn-outline-secondary" title="Download .ics — works with Apple Calendar, Google Calendar, Outlook">📅 Add to calendar</a>
+    {% endif %}
     <form method="post" action="{{ url_for('call_subscribe', call_id=call.id) }}" class="d-inline">
       {% if is_subscribed %}
         <input type="hidden" name="action" value="unsubscribe">

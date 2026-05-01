@@ -2229,6 +2229,66 @@ def register_routes(app):
         flash(f'Marked as verified on {call.last_verified_at}.', 'success')
         return redirect(url_for('call_detail', call_id=call_id))
 
+    @app.route('/calls/<int:call_id>/ical')
+    def call_ical(call_id):
+        if not login_required():
+            return _login_redirect()
+        call = db.session.get(CallForSubmission, call_id)
+        if not call or not call.known_deadline:
+            abort(404)
+
+        def _esc(s):
+            return (s or '').replace('\\', '\\\\').replace(';', '\\;').replace(',', '\\,').replace('\n', '\\n').replace('\r', '')
+
+        dtstart = call.known_deadline.strftime('%Y%m%d')
+        dtend = (call.known_deadline + timedelta(days=1)).strftime('%Y%m%d')
+        desc_parts = []
+        if call.full_name:
+            desc_parts.append(call.full_name)
+        if call.description:
+            desc_parts.append(call.description)
+        if call.source_url:
+            desc_parts.append(call.source_url)
+
+        lines = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//Kompresorinė Platform//Calls//EN',
+            'CALSCALE:GREGORIAN',
+            'METHOD:PUBLISH',
+            'BEGIN:VEVENT',
+            f'UID:call-{call.id}@kompresorine',
+            f'DTSTART;VALUE=DATE:{dtstart}',
+            f'DTEND;VALUE=DATE:{dtend}',
+            f'SUMMARY:{_esc("Deadline: " + call.title)}',
+            f'DESCRIPTION:{_esc(chr(10).join(desc_parts))}',
+        ]
+        if call.source_url:
+            lines.append(f'URL:{call.source_url}')
+        lines += [
+            'BEGIN:VALARM',
+            'ACTION:DISPLAY',
+            'DESCRIPTION:Upcoming deadline',
+            'TRIGGER:-P7D',
+            'END:VALARM',
+            'BEGIN:VALARM',
+            'ACTION:DISPLAY',
+            'DESCRIPTION:Upcoming deadline',
+            'TRIGGER:-P1D',
+            'END:VALARM',
+            'END:VEVENT',
+            'END:VCALENDAR',
+        ]
+
+        ics = '\r\n'.join(lines) + '\r\n'
+        slug = call.title.lower().replace(' ', '-').replace('/', '-')
+        from flask import Response
+        return Response(
+            ics,
+            mimetype='text/calendar; charset=utf-8',
+            headers={'Content-Disposition': f'attachment; filename="{slug}-deadline.ics"'}
+        )
+
     # ── About ──
 
     @app.route('/about')

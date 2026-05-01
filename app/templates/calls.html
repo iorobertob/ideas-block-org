@@ -170,6 +170,9 @@
       {% if c.source_url %}
       <a href="{{ c.source_url }}" target="_blank" rel="noopener" class="ms-1 small-muted" style="font-size:0.78rem" title="Source">↗</a>
       {% endif %}
+      {% if c.known_deadline %}
+      <a href="{{ url_for('call_ical', call_id=c.id) }}" class="ms-1 small-muted" style="font-size:0.78rem" title="Add to calendar (.ics)">📅</a>
+      {% endif %}
     </td>
   </tr>
   {% else %}
@@ -182,6 +185,6 @@
 </div>
 
 <div class="mt-3 small-muted" style="font-size:0.78rem">
-  ★ = subscribed · ☆ = subscribe · ⟳ = bump recurring deadline · ↗ = source link · Yellow = within 30 days or needs bump · ⚠ = not verified in 90+ days
+  ★ = subscribed · ☆ = subscribe · ⟳ = bump recurring deadline · ↗ = source link · 📅 = add to calendar · Yellow = within 30 days or needs bump · ⚠ = not verified in 90+ days
 </div>
 {% endblock %}
