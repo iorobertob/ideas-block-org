@@ -13,6 +13,7 @@
   'residency': 'background:#fff3e0;color:#bf6f00',
   'prize': 'background:#fce8d8;color:#7a3c00',
   'workshop': 'background:#e0f7fa;color:#006064',
+  'funding': 'background:#e8f4f8;color:#1a5276',
   'other': 'background:#f5f5f5;color:#555'
 } %}
 {% set overdue = call.known_deadline and call.known_deadline < today and call.deadline_status == 'fixed' %}
@@ -22,7 +23,13 @@
 
 <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
   <div>
-    <div class="small-muted mb-1"><a href="{{ url_for('calls') }}">← Calls &amp; Deadlines</a></div>
+    <div class="small-muted mb-1">
+      {% if call.venue_type == 'funding' %}
+      <a href="{{ url_for('funding') }}">← Funding Programs</a>
+      {% else %}
+      <a href="{{ url_for('calls') }}">← Calls &amp; Deadlines</a>
+      {% endif %}
+    </div>
     <h1>{{ call.title }}</h1>
     {% if call.full_name %}<div class="small-muted">{{ call.full_name }}</div>{% endif %}
     <div class="mt-1">
@@ -174,7 +181,7 @@
         <input class="form-control form-control-sm" name="full_name" value="{{ call.full_name }}"></div>
       <div class="col-md-3"><label class="form-label small mb-1">Type</label>
         <select class="form-select form-select-sm" name="venue_type">
-          {% for vt in ['conference','journal','festival','residency','prize','workshop','other'] %}
+          {% for vt in ['conference','journal','festival','residency','prize','workshop','funding','other'] %}
           <option value="{{ vt }}" {% if call.venue_type==vt %}selected{% endif %}>{{ vt|capitalize }}</option>
           {% endfor %}
         </select>

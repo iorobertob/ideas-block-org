@@ -1,21 +1,27 @@
 {% extends 'base.html' %}{% block content %}
 <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
   <div>
-    <h1>Calls &amp; Deadlines</h1>
+    <h1>{{ page_title if page_title else 'Calls &amp; Deadlines' }}</h1>
+    {% if funding_mode %}
+    <div class="small-muted">Lithuanian Culture Council, Vilnius Municipality, NordPlus and other funding programs — subscribe for deadline reminders</div>
+    {% else %}
     <div class="small-muted">Conferences, journals, festivals, residencies and open calls — subscribe to get email reminders</div>
+    {% endif %}
   </div>
   {% if is_manager %}
-  <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newCallForm">+ Add call</button>
+  <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#newCallForm">+ Add {{ 'program' if funding_mode else 'call' }}</button>
   {% endif %}
 </div>
 
 {% if is_manager %}
 <div class="collapse mb-3" id="newCallForm">
 <div class="card"><div class="card-body">
-<h5 class="mb-3">New call for submission</h5>
-<form method="post" class="row g-2">
-  <div class="col-md-5"><input class="form-control form-control-sm" name="title" placeholder="Short title / acronym (e.g. NIME 2026)" required></div>
-  <div class="col-md-4"><input class="form-control form-control-sm" name="full_name" placeholder="Full name (optional)"></div>
+<h5 class="mb-3">{{ 'New funding program' if funding_mode else 'New call for submission' }}</h5>
+<form method="post" action="{{ url_for('funding') if funding_mode else url_for('calls') }}" class="row g-2">
+  {% if funding_mode %}<input type="hidden" name="venue_type" value="funding">{% endif %}
+  <div class="col-md-5"><input class="form-control form-control-sm" name="title" placeholder="Short title (e.g. LCC — Mobility)" required></div>
+  <div class="col-md-{% if funding_mode %}7{% else %}4{% endif %}"><input class="form-control form-control-sm" name="full_name" placeholder="Full name (optional)"></div>
+  {% if not funding_mode %}
   <div class="col-md-3">
     <select class="form-select form-select-sm" name="venue_type">
       <option value="conference">Conference</option>
@@ -24,10 +30,12 @@
       <option value="residency">Residency</option>
       <option value="prize">Prize</option>
       <option value="workshop">Workshop</option>
+      <option value="funding">Funding</option>
       <option value="other">Other</option>
     </select>
   </div>
-  <div class="col-md-6"><input class="form-control form-control-sm" name="area" placeholder="Area / topics (e.g. sound art, computer music, MIR)"></div>
+  {% endif %}
+  <div class="col-md-6"><input class="form-control form-control-sm" name="area" placeholder="{{ 'Eligible applicants / areas (e.g. individual artists, Lithuania)' if funding_mode else 'Area / topics (e.g. sound art, computer music, MIR)' }}"></div>
   <div class="col-md-3">
     <select class="form-select form-select-sm" name="deadline_status">
       <option value="fixed">Fixed deadline</option>
@@ -47,8 +55,8 @@
   <div class="col-md-3"><input type="date" class="form-control form-control-sm" name="known_deadline" placeholder="Deadline"></div>
   <div class="col-md-9"><input class="form-control form-control-sm" type="url" name="source_url" placeholder="Source URL (https://…)"></div>
   <div class="col-12"><textarea class="form-control form-control-sm" name="description" placeholder="Short description" style="min-height:60px"></textarea></div>
-  <div class="col-12"><textarea class="form-control form-control-sm" name="guidelines" placeholder="Application guidelines (optional — formats, word limits, submission process…)" style="min-height:60px"></textarea></div>
-  <div class="col-12 d-flex justify-content-end"><button class="btn btn-sm btn-dark">Add call</button></div>
+  <div class="col-12"><textarea class="form-control form-control-sm" name="guidelines" placeholder="{{ 'Eligibility, amounts, how to apply…' if funding_mode else 'Application guidelines (optional — formats, word limits, submission process…)' }}" style="min-height:60px"></textarea></div>
+  <div class="col-12 d-flex justify-content-end"><button class="btn btn-sm btn-dark">{{ 'Add program' if funding_mode else 'Add call' }}</button></div>
 </form>
 </div></div>
 </div>
@@ -57,12 +65,14 @@
 <!-- Filters -->
 <form method="get" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
   <input class="form-control form-control-sm" style="max-width:200px" name="q" value="{{ q }}" placeholder="Search…">
+  {% if not funding_mode %}
   <select class="form-select form-select-sm" style="max-width:150px" name="venue_type">
     <option value="">All types</option>
     {% for vt in [('conference','Conference'),('journal','Journal'),('festival','Festival'),('residency','Residency'),('prize','Prize'),('workshop','Workshop'),('other','Other')] %}
     <option value="{{ vt[0] }}" {% if venue_type_f==vt[0] %}selected{% endif %}>{{ vt[1] }}</option>
     {% endfor %}
   </select>
+  {% endif %}
   <select class="form-select form-select-sm" style="max-width:180px" name="deadline_status">
     <option value="">All statuses</option>
     <option value="fixed" {% if status_f=='fixed' %}selected{% endif %}>Fixed deadline</option>
@@ -78,7 +88,7 @@
   </div>
   <button class="btn btn-sm btn-outline-secondary">Filter</button>
   {% if q or venue_type_f or status_f or needs_bump_f %}
-  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('calls') }}">Clear</a>
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('funding') if funding_mode else url_for('calls') }}">Clear</a>
   {% endif %}
 </form>
 
@@ -96,6 +106,7 @@
   'residency': 'background:#fff3e0;color:#bf6f00',
   'prize': 'background:#fce8d8;color:#7a3c00',
   'workshop': 'background:#e0f7fa;color:#006064',
+  'funding': 'background:#e8f4f8;color:#1a5276',
   'other': 'background:#f5f5f5;color:#555'
 } %}
 
@@ -104,9 +115,9 @@
 <div class="table-responsive">
 <table class="table table-sm mb-0 table-hover linked-row">
   <thead><tr>
-    <th>Call</th>
-    <th class="hide-mobile">Type</th>
-    <th class="hide-mobile">Area</th>
+    <th>{{ 'Program' if funding_mode else 'Call' }}</th>
+    {% if not funding_mode %}<th class="hide-mobile">Type</th>{% endif %}
+    <th class="hide-mobile">{{ 'Eligibility / area' if funding_mode else 'Area' }}</th>
     <th>Deadline</th>
     <th>Status</th>
     <th>Sub.</th>
@@ -125,10 +136,12 @@
       {% if c.full_name %}<div class="small-muted" style="font-size:0.77rem">{{ c.full_name }}</div>{% endif %}
       {% if c.description %}<div class="small-muted" style="font-size:0.77rem">{{ c.description[:100] }}{% if c.description|length > 100 %}…{% endif %}</div>{% endif %}
     </td>
+    {% if not funding_mode %}
     <td class="hide-mobile">
       <span class="agenda-pill" style="{{ vt_colors.get(c.venue_type,'') }}">{{ c.venue_type }}</span>
       {% if c.recurrence != 'none' %}<span class="small-muted" style="font-size:0.7rem;display:block">⟳ {{ c.recurrence }}</span>{% endif %}
     </td>
+    {% endif %}
     <td class="hide-mobile small-muted" style="max-width:200px;font-size:0.77rem">{{ c.area[:80] }}{% if c.area|length > 80 %}…{% endif %}</td>
     <td class="text-nowrap small-muted">
       {% if c.known_deadline %}
@@ -176,7 +189,7 @@
     </td>
   </tr>
   {% else %}
-  <tr><td colspan="7" class="text-center small-muted py-3">No calls found. {% if is_manager %}Add one above.{% endif %}</td></tr>
+  <tr><td colspan="{{ 6 if funding_mode else 7 }}" class="text-center small-muted py-3">No {{ 'programs' if funding_mode else 'calls' }} found. {% if is_manager %}Add one above.{% endif %}</td></tr>
   {% endfor %}
   </tbody>
 </table>

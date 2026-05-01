@@ -1999,7 +1999,7 @@ def register_routes(app):
         venue_type_f = request.args.get('venue_type', '')
         status_f = request.args.get('deadline_status', '')
         q = request.args.get('q', '').strip()
-        query = CallForSubmission.query
+        query = CallForSubmission.query.filter(CallForSubmission.venue_type != 'funding')
         if venue_type_f:
             query = query.filter_by(venue_type=venue_type_f)
         if status_f:
@@ -2028,6 +2028,63 @@ def register_routes(app):
                                needs_bump_f=needs_bump_f,
                                staleness_threshold=staleness_threshold,
                                is_manager=is_manager())
+
+    @app.route('/funding', methods=['GET', 'POST'])
+    def funding():
+        if not login_required():
+            return _login_redirect()
+        if request.method == 'POST':
+            if not is_manager():
+                abort(403)
+            c = CallForSubmission(
+                title=request.form.get('title', '').strip(),
+                full_name=request.form.get('full_name', '').strip(),
+                venue_type='funding',
+                area=request.form.get('area', '').strip(),
+                description=request.form.get('description', '').strip(),
+                deadline_status=request.form.get('deadline_status', 'unknown-current'),
+                known_deadline=parse_date(request.form.get('known_deadline')),
+                source_url=request.form.get('source_url', '').strip(),
+                guidelines=request.form.get('guidelines', '').strip(),
+                recurrence=request.form.get('recurrence', 'none'),
+                created_by_id=current_user().id,
+            )
+            db.session.add(c)
+            db.session.commit()
+            flash('Funding program added.', 'success')
+            return redirect(url_for('funding'))
+
+        status_f = request.args.get('deadline_status', '')
+        q = request.args.get('q', '').strip()
+        query = CallForSubmission.query.filter_by(venue_type='funding')
+        if status_f:
+            query = query.filter_by(deadline_status=status_f)
+        if q:
+            query = query.filter(
+                CallForSubmission.title.ilike(f'%{q}%') |
+                CallForSubmission.area.ilike(f'%{q}%') |
+                CallForSubmission.description.ilike(f'%{q}%')
+            )
+        today = date.today()
+        needs_bump_f = request.args.get('needs_bump', '')
+        all_calls = query.order_by(
+            CallForSubmission.known_deadline.asc().nullslast(),
+            CallForSubmission.title.asc()
+        ).all()
+        if needs_bump_f:
+            all_calls = [c for c in all_calls
+                         if c.known_deadline and c.known_deadline < today and c.recurrence != 'none']
+        user = current_user()
+        subscribed_ids = {s.call_id for s in CallSubscription.query.filter_by(user_id=user.id).all()} if user else set()
+        staleness_threshold = today - timedelta(days=90)
+        return render_template('calls.html', calls=all_calls, today=today,
+                               subscribed_ids=subscribed_ids,
+                               venue_type_f='', status_f=status_f, q=q,
+                               needs_bump_f=needs_bump_f,
+                               staleness_threshold=staleness_threshold,
+                               is_manager=is_manager(),
+                               funding_mode=True,
+                               page_title='Funding Programs')
 
     @app.route('/calls/<int:call_id>', methods=['GET', 'POST'])
     def call_detail(call_id):

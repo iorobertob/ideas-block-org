@@ -457,7 +457,102 @@ Legend for deadline fields:
 
 ---
 
-## 4) Suggested venue priority map for this research
+## 4) Lithuanian and Nordic funding programs
+
+### Lithuanian Culture Council (Lietuvos kultūros taryba / ltkt.lt)
+
+The Lithuanian Culture Council is the primary public arts funding body in Lithuania, managing competitive grants for individuals and organisations across all art forms. Applications are submitted through the LKT IS 2.0 electronic system (lktis.ltkt.lt), authenticated via the e-government gateway.
+
+#### Mobilumo stipendijos kultūros ir meno kūrėjams (Mobility Scholarships for Culture and Arts Creators)
+- area: individual artist mobility, international residencies, conferences, creative exchange — all art forms
+- deadline_status: fixed (multiple annual rounds)
+- known_deadlines:
+  - 2026-06-30 (round 5 — for activities starting Sep–Dec 2026; open May 1–June 30, 2026)
+- notes: Several rounds per year, each covering a different activity quarter. Check ltkt.lt/kurejams/konkursai for current round. Apply via lktis.ltkt.lt.
+- official_url: https://ltkt.lt/kurejams/konkursai
+- recurrence: annual
+
+#### Tarpsritiniai projektai (Interdisciplinary / Cross-Domain Project Grants)
+- area: professional artistic creation and dissemination in Lithuania — events, publishing, critical discourse, networking, co-productions, all art forms
+- deadline_status: seasonal-check
+- known_deadlines: []
+- notes: Annual competitive grant for organisations supporting professional creation and its dissemination. Five priority tracks: youth arts education, regional access, cultural continuity, innovation, cultural identity. Artistic/cultural quality carries the highest weight in evaluation (30 pts). Annual deadline typically autumn.
+- official_url: https://ltkt.lt/organizacijoms/konkursai/205
+- recurrence: annual
+
+#### Strateginis tarptautinių renginių finansavimas (Strategic International Events Funding)
+- area: established international cultural events held in Lithuania — all art forms (excluding cinema)
+- deadline_status: seasonal-check
+- known_deadlines: []
+- funding: €40,000–€140,000/year per event (up to 70% of total budget)
+- notes: Multi-year strategic funding for established international arts events in Lithuania presenting Lithuanian and foreign art at the highest professional level. Events must have run at least 3 times and enjoy international recognition. Registered legal entities in Lithuania (excluding government). Annual selection competition.
+- official_url: https://ltkt.lt/organizacijoms/konkursai/589
+- recurrence: annual
+
+#### Tinklaveika (Networking — Cultural and Creative Industries)
+- area: cultural and creative industries (CCI) — networking, export promotion, international events, entrepreneurship
+- deadline_status: seasonal-check
+- known_deadlines:
+  - 2025-09-09 (for 2026 activities — call opened June 26, 2025)
+- funding: max €20,000 per grant (75% intensity); total budget €200,000/year
+- notes: Supports CCI organizations in developing international networks, promoting Lithuanian CCI abroad, and participating in international intersectoral events. Legal entities in Vilnius, Kaunas, or Klaipėda (or EU/EEA). Min project €3,333 / min request €2,500. Applications typically open summer for following-year activities.
+- official_url: https://ltkt.lt/organizacijoms/konkursai/944
+- recurrence: annual
+
+---
+
+### Vilnius City Municipality — Cultural Funding (vilnius.lt)
+
+#### Kultūros rėmimo programų projektų konkursas (Culture Support Programs Project Competition)
+- area: visual and applied arts, performing arts, music, film, literature, publishing, cultural and creative industries, ethnic culture, amateur art
+- deadline_status: seasonal-check
+- known_deadlines:
+  - 2026 round: closed (results announced Feb 2026; 599 applications, 239 funded)
+  - 2027 round: expected to open autumn 2026
+- funding: €7,000–€25,000 per project (up to 80% of project value); total ~€1.5 million/year across 11 program categories
+- notes: Annual Vilnius City Municipality competitive call for cultural projects. 11 program categories. Applications via konkursai.vilnius.lt. Results typically announced February–March for current calendar year. Watch for autumn call for following year.
+- official_url: https://vilnius.lt/savivaldybe/svietimas-kultura-ir-sportas/kultura/kulturos-remimo-programu-projektu-konkursas
+- application_portal: https://konkursai.vilnius.lt/
+- recurrence: annual
+
+#### Vilniaus miesto kultūros organizacijų finansavimo konkursas 2026–2028 (Multi-year Organisational Funding)
+- area: established cultural organisations in Vilnius — all art forms
+- deadline_status: unknown-current
+- known_deadlines: []
+- notes: Three-year strategic funding for established cultural organisations in Vilnius. Provides multi-year grants for organisational sustainability and programming. Check konkursai.vilnius.lt for next round.
+- official_url: https://konkursai.vilnius.lt/konkursai/2026-2028-metu-vilniaus-miesto-kulturos-organizaciju-finansavimo-konkursas
+- recurrence: none (cycle-based, not annual)
+
+---
+
+### Nordic-Baltic Funding Programs
+
+#### NordPlus Horizontal
+- full_name: NordPlus Horizontal — Nordic and Baltic Cross-Sectoral Cooperation
+- area: cross-sectoral Nordic-Baltic cooperation — culture, civil society, education, lifelong learning, mobility networks
+- deadline_status: fixed
+- known_deadlines:
+  - 2026-02-02 (2026 round — passed)
+  - 2027-02-01 (estimated — next round)
+- notes: Nordic Council of Ministers program for cross-sectoral projects and networks across Nordic and Baltic countries (including Lithuania, Estonia, Latvia). Covers culture, civil society, and education. Open to any institution or organisation working with education and lifelong learning; cultural/civil society organisations can join as co-applicants. Apply via nordplusonline.org. 2026 deadline was February 2, 2026; next round expected February 2027.
+- official_url: https://nordplusonline.org/
+- recurrence: annual
+
+#### Nordic-Baltic Mobility Programme for Culture
+- full_name: Nordic-Baltic Mobility Programme for Culture — Nordic Culture Point (Nordisk kulturkontakt)
+- area: professional artist and cultural practitioner mobility — exhibitions, collaboration, conferences, research visits, guest performances — Nordic and Baltic countries
+- deadline_status: fixed
+- known_deadlines:
+  - 2026-09-18 at 15:59 EEST (current round open Aug 18 – Sep 18, 2026)
+- funding: travel costs + daily allowances (fixed rates, up to 14 days); use rate calculator at nkk.org
+- notes: Individual mobility funding for professional artists and cultural practitioners residing in Nordic or Baltic countries (Lithuania eligible). Covers travel and stays within the Nordic-Baltic region only. Purpose: collaboration, exhibitions, conferences, research, guest performances. Requires invitation letter from host. Individual applications only (not institutional). Apply via applicant.nordiskkulturkontakt.org. CURRENTLY OPEN for 2026 round.
+- official_url: https://www.nkk.org/en/mobility-funding/
+- application_portal: https://applicant.nordiskkulturkontakt.org/
+- recurrence: annual
+
+---
+
+## 6) Suggested venue priority map for this research
 
 ### Top-tier direct-fit journals
 - Journal for Artistic Research (JAR)
@@ -501,7 +596,7 @@ Legend for deadline fields:
 
 ---
 
-## 5) Website-building notes for the AI agent
+## 7) Website-building notes for the AI agent
 
 Possible filters:
 - domain: artistic-research / sound-art / computer-music / MIR / spatial-audio / AI-language / philosophy
@@ -523,7 +618,7 @@ Suggested caution flag:
 
 ---
 
-## 6) Short machine-readable summary
+## 8) Short machine-readable summary
 
 ```yaml
 core_journals:
